@@ -15,6 +15,6 @@ public class ExpenseRequest {
     private LocalDate date;
     private String description;
     private String addedBy;
-    private MultipartFile receipt;
+    private MultipartFile[] receipts;
 }
 

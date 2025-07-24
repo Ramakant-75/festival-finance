@@ -16,9 +16,9 @@ public class StatsController {
     private final StatsService statsService;
 
     @GetMapping("/summary")
-    public ResponseEntity<DashboardSummaryResponse> getDashboardSummary() {
+    public ResponseEntity<DashboardSummaryResponse> getDashboardSummary(@RequestParam int year) {
         log.info("starting stats api --->");
-        return ResponseEntity.ok(statsService.getSummary());
+        return ResponseEntity.ok(statsService.getSummary(year));
     }
 }
 

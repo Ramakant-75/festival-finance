@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "expense")
@@ -27,10 +29,7 @@ public class Expense {
 
     private String addedBy;
 
-    @Lob
-    @Column(name = "receipt",columnDefinition = "MEDIUMBLOB")
-    private byte[] receipt;
-
-    private String imageName;
+    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ExpenseReceipt> receipts;
 }
 

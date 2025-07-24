@@ -2,20 +2,20 @@ package com.example.societyfest.controller;
 
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
-import com.example.societyfest.entity.Expense;
+import com.example.societyfest.entity.ExpenseReceipt;
+import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import com.example.societyfest.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -28,6 +28,9 @@ public class ExpenseController {
     @Autowired
     private ExpenseRepository expenseRepo;
 
+    @Autowired
+    private ExpenseReceiptRepository attachmentRepo;
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ExpenseResponse> addExpense(
             @ModelAttribute ExpenseRequest request
@@ -37,7 +40,10 @@ public class ExpenseController {
 
 
     @GetMapping
-    public ResponseEntity<List<ExpenseResponse>> list() {
+    public ResponseEntity<List<ExpenseResponse>> list(@RequestParam(required = false) Integer year) {
+        if (year != null) {
+            return ResponseEntity.ok(expenseService.getExpensesByYear(year));
+        }
         return ResponseEntity.ok(expenseService.getAllExpenses());
     }
 
@@ -54,18 +60,31 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.saveExpenseWithImage(request, image));
     }
 
-    @GetMapping("/{id}/receipt")
-    public ResponseEntity<byte[]> getExpenseReceipt(@PathVariable Long id) {
-        Expense expense = expenseRepo.findById(id).orElseThrow(() -> new RuntimeException("Expense not found"));
 
-        if (expense.getReceipt() == null) {
-            return ResponseEntity.notFound().build();
+
+    @PostMapping("/{id}/upload")
+    public ResponseEntity<?> upload(@PathVariable Long id, @RequestParam("files") List<MultipartFile> files) throws Exception {
+        expenseService.uploadReceipts(id, files);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{expenseId}/receipts/{receiptId}")
+    public ResponseEntity<byte[]> downloadReceipt(@PathVariable Long expenseId, @PathVariable Long receiptId) {
+        ExpenseReceipt receipt = attachmentRepo.findById(receiptId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receipt not found"));
+
+        if (!receipt.getExpense().getId().equals(expenseId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Receipt does not belong to the given expense");
         }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.IMAGE_JPEG); // or detect dynamically
-        return new ResponseEntity<>(expense.getReceipt(), headers, HttpStatus.OK);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(receipt.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + receipt.getFileName() + "\"")
+                .body(receipt.getFile());
     }
+
+
+
 
 
 }

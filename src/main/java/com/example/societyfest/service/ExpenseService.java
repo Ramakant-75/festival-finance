@@ -3,31 +3,33 @@ package com.example.societyfest.service;
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
 import com.example.societyfest.entity.Expense;
+import com.example.societyfest.entity.ExpenseReceipt;
+import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepo;
 
+    @Autowired
+    private ExpenseReceiptRepository receiptRepo;
+
     public ExpenseResponse addExpense(ExpenseRequest req) {
-        byte[] receiptBytes = null;
-        try {
-            if (req.getReceipt() != null && !req.getReceipt().isEmpty()) {
-                receiptBytes = req.getReceipt().getBytes();
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Error reading receipt file", e);
-        }
+        boolean hasReceipt = (req.getReceipts() != null && req.getReceipts().length > 0);
 
         Expense expense = Expense.builder()
                 .category(req.getCategory())
@@ -35,13 +37,44 @@ public class ExpenseService {
                 .date(req.getDate())
                 .description(req.getDescription())
                 .addedBy(req.getAddedBy())
-                .receipt(receiptBytes) // <--- Save file
                 .build();
 
-        expenseRepo.save(expense);
-        return toResponse(expense);
+        Expense savedExpense = expenseRepo.save(expense);
+
+        if (req.getReceipts() != null) {
+            for (MultipartFile file : req.getReceipts()) {
+                if (!file.isEmpty()) {
+                    try {
+                        ExpenseReceipt receipt = ExpenseReceipt.builder()
+                                .expense(savedExpense)
+                                .fileName(file.getOriginalFilename())
+                                .file(file.getBytes())
+                                .contentType(file.getContentType())
+                                .build();
+                        receiptRepo.save(receipt);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to store receipt: " + file.getOriginalFilename(), e);
+                    }
+                }
+            }
+        }
+
+        return toResponse(savedExpense);
     }
 
+    public void uploadReceipts(Long expenseId, List<MultipartFile> files) throws Exception {
+        Expense expense = expenseRepo.findById(expenseId).orElseThrow();
+        List<ExpenseReceipt> receipts = new ArrayList<>();
+        for (MultipartFile file : files) {
+            receipts.add(ExpenseReceipt.builder()
+                    .file(file.getBytes())
+                    .fileName(file.getOriginalFilename())
+                    .contentType(file.getContentType())
+                    .expense(expense)
+                    .build());
+        }
+        receiptRepo.saveAll(receipts);
+    }
 
     public List<ExpenseResponse> getAllExpenses() {
         return expenseRepo.findAll()
@@ -51,6 +84,14 @@ public class ExpenseService {
     }
 
     private ExpenseResponse toResponse(Expense e) {
+        List<ExpenseReceipt> receiptList = receiptRepo.findByExpenseId(e.getId());
+
+        boolean hasReceipt = !receiptList.isEmpty();
+
+        List<ExpenseResponse.ReceiptMetadata> receiptMetadataList = receiptList.stream()
+                .map(r -> new ExpenseResponse.ReceiptMetadata(r.getId(), r.getFileName()))
+                .collect(Collectors.toList());
+
         return ExpenseResponse.builder()
                 .id(e.getId())
                 .category(e.getCategory())
@@ -58,9 +99,11 @@ public class ExpenseService {
                 .date(e.getDate())
                 .description(e.getDescription())
                 .addedBy(e.getAddedBy())
-                .hasReceipt(e.getReceipt() != null)
+                .hasReceipt(hasReceipt)
+                .receipts(receiptMetadataList)
                 .build();
     }
+
 
     public ExpenseResponse updateExpense(Long id, ExpenseRequest req) {
         Expense expense = expenseRepo.findById(id)
@@ -99,14 +142,15 @@ public class ExpenseService {
                 .date(req.getDate())
                 .description(req.getDescription())
                 .addedBy(req.getAddedBy())
-                .receipt(imageData)
-                .imageName(imageName)
                 .build();
 
         expenseRepo.save(expense);
         return toResponse(expense);
     }
 
+    public List<ExpenseResponse> getExpensesByYear(int year) {
+        List<Expense> list = expenseRepo.findAllByYear(year);
+        return list.stream().map(this::toResponse).collect(Collectors.toList());
+    }
 
 }
-

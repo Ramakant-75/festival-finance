@@ -20,4 +20,6 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     @Query("SELECT COUNT(d) > 0 FROM Donation d WHERE d.building = :building AND d.roomNumber = :roomNumber AND YEAR(d.date) = :year")
     boolean existsByRoomNumberAndYear(@Param("building") String building, @Param("roomNumber") String roomNumber, @Param("year") String year);
 
+    @Query("SELECT SUM(d.amount) FROM Donation d WHERE YEAR(d.date) = :year")
+    Double sumAmountByYear(@Param("year") int year);
 }

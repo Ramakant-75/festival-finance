@@ -20,9 +20,9 @@ public class StatsService {
     private final DonationRepository donationRepo;
     private final ExpenseRepository expenseRepo;
 
-    public DashboardSummaryResponse getSummary() {
-        List<Donation> donations = donationRepo.findAll();
-        List<Expense> expenses = expenseRepo.findAll();
+    public DashboardSummaryResponse getSummary(int year) {
+        List<Donation> donations = donationRepo.findAllByYear(year);
+        List<Expense> expenses = expenseRepo.findAllByYear(year);
 
         double totalDonations = donations.stream().mapToDouble(Donation::getAmount).sum();
         double totalExpenses = expenses.stream().mapToDouble(Expense::getAmount).sum();

@@ -1,5 +1,7 @@
 package com.example.societyfest.controller;
 
+import com.example.societyfest.entity.Donation;
+import com.example.societyfest.entity.Expense;
 import com.example.societyfest.repository.DonationRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import com.example.societyfest.util.ExcelGenerator;
@@ -10,8 +12,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/export")
@@ -39,20 +43,51 @@ public class ExportController {
                 .body(new InputStreamResource(excelStream));
     }
 
-    @GetMapping("/summary")
-    public ResponseEntity<InputStreamResource> exportFestivalSummary() {
-        var donations = donationRepo.findAll();
-        var expenses = expenseRepo.findAll();
+@GetMapping("/festival-report")
+public ResponseEntity<InputStreamResource> generateFestivalReport(@RequestParam int year) {
+    List<Expense> expenses = expenseRepo.findAllByYear(year); // Custom repo method
+    double totalDonations = donationRepo.sumAmountByYear(year);
+    double totalExpenses = expenses.stream().mapToDouble(Expense::getAmount).sum();
+    double balance = totalDonations - totalExpenses;
 
-        double previousYearCarryForward = 1200.00; // ← you can read from DB or config later
+    ByteArrayInputStream pdf = PdfGenerator.generateFestivalReport(totalDonations, totalExpenses, balance, expenses,year);
 
-        ByteArrayInputStream pdf = PdfGenerator.generateFestivalSummary(donations, expenses, previousYearCarryForward);
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=festival-summary.pdf")
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(new InputStreamResource(pdf));
+    return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=festival-report-" + year + ".pdf")
+            .contentType(MediaType.APPLICATION_PDF)
+            .body(new InputStreamResource(pdf));
     }
+
+//    @PostMapping("/festival-pdf")
+//    public ResponseEntity<InputStreamResource> generateFestivalPdf(
+//            @RequestParam("year") int year,
+//            @RequestParam("chartImage") MultipartFile chartImage
+//    ) throws Exception {
+//
+//        List<Donation> donations = donationRepo.findAllByYear(year);
+//        List<Expense> expenses = expenseRepo.findAllByYear(year);
+//
+//        double totalDonations = donations.stream().mapToDouble(Donation::getAmount).sum();
+//        double totalExpenses = expenses.stream().mapToDouble(Expense::getAmount).sum();
+//        double balance = totalDonations - totalExpenses;
+//
+//        byte[] chartImageBytes = chartImage.getBytes();
+//
+//        ByteArrayInputStream pdf = PdfGenerator.generateDetailedReport(
+//                year,
+//                totalDonations,
+//                totalExpenses,
+//                balance,
+//                expenses,
+//                chartImageBytes
+//        );
+//
+//        return ResponseEntity.ok()
+//                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=festival-report-" + year + ".pdf")
+//                .contentType(MediaType.APPLICATION_PDF)
+//                .body(new InputStreamResource(pdf));
+//    }
+
 
 }
 

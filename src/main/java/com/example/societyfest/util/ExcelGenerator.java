@@ -13,9 +13,10 @@ import java.util.List;
 public class ExcelGenerator {
 
     public static InputStream donationsToExcel(List<Donation> donations) {
-        String[] headers = {"Room Number", "Amount", "Payment Mode", "Date", "Remarks"};
+        String[] headers = {"Building", "Room Number", "Amount", "Payment Mode", "Date", "Remarks"};
 
         return createSheetWithData("Donations", headers, donations.stream().map(d -> new String[]{
+                d.getBuilding(),
                 d.getRoomNumber(),
                 String.valueOf(d.getAmount()),
                 d.getPaymentMode().name(),

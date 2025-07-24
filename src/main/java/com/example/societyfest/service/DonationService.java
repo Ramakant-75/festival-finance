@@ -62,15 +62,17 @@ public class DonationService {
         try {
             return donationRepo.findAllByYear(year)
                     .stream()
-                    .map(d -> DonationResponse.builder()
-                            .roomNumber(d.getRoomNumber())
-                            .amount(d.getAmount())
-                            .building(d.getBuilding())
-                            .paymentMode(d.getPaymentMode())
-                            .date(d.getDate())
-                            .remarks(d.getRemarks())
-                            .build())
-                    .toList();
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+//                    .map(d -> DonationResponse.builder()
+//                            .roomNumber(d.getRoomNumber())
+//                            .amount(d.getAmount())
+//                            .building(d.getBuilding())
+//                            .paymentMode(d.getPaymentMode())
+//                            .date(d.getDate())
+//                            .remarks(d.getRemarks())
+//                            .build())
+//                    .toList();
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
         }

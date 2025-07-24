@@ -32,8 +32,8 @@ public class DonationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DonationResponse>> list(@RequestParam(required = false) int year) {
-        return ResponseEntity.ok(donationService.getAll());
+    public ResponseEntity<List<DonationResponse>> list(@RequestParam int year) {
+        return ResponseEntity.ok(donationService.getDonationsByYear(year));
     }
 
     @PutMapping("/{id}")
@@ -42,10 +42,10 @@ public class DonationController {
         return ResponseEntity.ok("Donation updated");
     }
 
-    @GetMapping("/yearwise")
-    public ResponseEntity<List<DonationResponse>> listDonationsByYear(@RequestParam int year){
-        return ResponseEntity.ok(donationService.getDonationsByYear(year));
-    }
+//    @GetMapping("/yearwise")
+//    public ResponseEntity<List<DonationResponse>> listDonationsByYear(@RequestParam int year){
+//        return ResponseEntity.ok(donationService.getDonationsByYear(year));
+//    }
 
     @GetMapping("/exists")
     public ResponseEntity<Boolean> checkIfExists(@RequestParam String building, @RequestParam String roomNumber,@RequestParam String year) {
