@@ -7,6 +7,8 @@ import com.example.societyfest.entity.Donation;
 import com.example.societyfest.repository.DonationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -58,21 +60,10 @@ public class DonationService {
                 .build();
     }
 
-    public List<DonationResponse> getDonationsByYear(int year) {
+    public Page<DonationResponse> getDonationsByYear(int year, Pageable pageable) {
         try {
-            return donationRepo.findAllByYear(year)
-                    .stream()
-                    .map(this::toResponse)
-                    .collect(Collectors.toList());
-//                    .map(d -> DonationResponse.builder()
-//                            .roomNumber(d.getRoomNumber())
-//                            .amount(d.getAmount())
-//                            .building(d.getBuilding())
-//                            .paymentMode(d.getPaymentMode())
-//                            .date(d.getDate())
-//                            .remarks(d.getRemarks())
-//                            .build())
-//                    .toList();
+            return donationRepo.findAllByYear(year,pageable)
+                    .map(this::toResponse);
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
         }

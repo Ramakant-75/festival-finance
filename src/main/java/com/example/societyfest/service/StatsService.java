@@ -21,7 +21,7 @@ public class StatsService {
     private final ExpenseRepository expenseRepo;
 
     public DashboardSummaryResponse getSummary(int year) {
-        List<Donation> donations = donationRepo.findAllByYear(year);
+        List<Donation> donations = donationRepo.findAllStatsByYear(year);
         List<Expense> expenses = expenseRepo.findAllByYear(year);
 
         double totalDonations = donations.stream().mapToDouble(Donation::getAmount).sum();

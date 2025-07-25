@@ -7,12 +7,14 @@ import com.example.societyfest.service.DonationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+
+import java.awt.print.Pageable;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -32,8 +34,11 @@ public class DonationController {
     }
 
     @GetMapping
-    public ResponseEntity<List<DonationResponse>> list(@RequestParam int year) {
-        return ResponseEntity.ok(donationService.getDonationsByYear(year));
+    public ResponseEntity<Page<DonationResponse>> list(@RequestParam int year,
+                                                       @RequestParam(defaultValue = "0") int page,
+                                                       @RequestParam(defaultValue = "10") int size) {
+        PageRequest pageRequest = PageRequest.of(page,size);
+        return ResponseEntity.ok(donationService.getDonationsByYear(year,pageRequest));
     }
 
     @PutMapping("/{id}")
