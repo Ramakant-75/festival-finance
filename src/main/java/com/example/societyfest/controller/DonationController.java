@@ -2,6 +2,7 @@ package com.example.societyfest.controller;
 
 import com.example.societyfest.dto.DonationRequest;
 import com.example.societyfest.dto.DonationResponse;
+import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
 import com.example.societyfest.service.DonationService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,9 +38,12 @@ public class DonationController {
     @GetMapping
     public ResponseEntity<Page<DonationResponse>> list(@RequestParam int year,
                                                        @RequestParam(defaultValue = "0") int page,
-                                                       @RequestParam(defaultValue = "10") int size) {
+                                                       @RequestParam(defaultValue = "10") int size,
+                                                       @RequestParam(required = false) String building,
+                                                       @RequestParam(required = false)PaymentMode paymentMode,
+                                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         PageRequest pageRequest = PageRequest.of(page,size);
-        return ResponseEntity.ok(donationService.getDonationsByYear(year,pageRequest));
+        return ResponseEntity.ok(donationService.getDonationsByYear(year,building,paymentMode,date,pageRequest));
     }
 
     @PutMapping("/{id}")

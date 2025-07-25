@@ -13,8 +13,20 @@ import java.util.Optional;
 
 public interface DonationRepository extends JpaRepository<Donation, Long> {
 
-    @Query("SELECT d FROM Donation d WHERE YEAR(d.date) = :year")
-    Page<Donation> findAllByYear(@Param("year") int year, Pageable page);
+    @Query("""
+      SELECT d FROM Donation d
+      WHERE YEAR(d.date) = :year
+        AND (:building IS NULL OR d.building = :building)
+        AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
+        AND (:date IS NULL OR d.date = :date)
+    """)
+    Page<Donation> findByYearAndFilters(
+            @Param("year") int year,
+            @Param("building") String building,
+            @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
+            @Param("date") java.time.LocalDate date,
+            Pageable pageable
+    );
 
     @Query("SELECT d FROM Donation d WHERE YEAR(d.date) = :year")
     List<Donation> findAllStatsByYear(@Param("year") int year);
@@ -27,4 +39,19 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
 
     @Query("SELECT SUM(d.amount) FROM Donation d WHERE YEAR(d.date) = :year")
     Double sumAmountByYear(@Param("year") int year);
+
+    @Query("""
+  SELECT d FROM Donation d
+  WHERE YEAR(d.date) = :year
+    AND (:building IS NULL OR d.building = :building)
+    AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
+    AND (:date IS NULL OR d.date = :date)
+""")
+    List<Donation> findAllByFilters(
+            @Param("year") int year,
+            @Param("building") String building,
+            @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
+            @Param("date") java.time.LocalDate date
+    );
+
 }

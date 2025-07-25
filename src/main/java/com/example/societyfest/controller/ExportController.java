@@ -2,12 +2,14 @@ package com.example.societyfest.controller;
 
 import com.example.societyfest.entity.Donation;
 import com.example.societyfest.entity.Expense;
+import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import com.example.societyfest.util.ExcelGenerator;
 import com.example.societyfest.util.PdfGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -26,13 +29,21 @@ public class ExportController {
     private final ExpenseRepository expenseRepo;
 
     @GetMapping("/donations")
-    public ResponseEntity<InputStreamResource> exportDonations() {
-        var excelStream = ExcelGenerator.donationsToExcel(donationRepo.findAll());
+    public ResponseEntity<InputStreamResource> exportDonations(
+            @RequestParam int year,
+            @RequestParam(required = false) String building,
+            @RequestParam(required = false) PaymentMode paymentMode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        List<Donation> donations = donationRepo.findAllByFilters(year, building, paymentMode, date);
+        ByteArrayInputStream excelStream = (ByteArrayInputStream) ExcelGenerator.donationsToExcel(donations);
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=donations.xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(new InputStreamResource(excelStream));
     }
+
 
     @GetMapping("/expenses")
     public ResponseEntity<InputStreamResource> exportExpenses() {

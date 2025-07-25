@@ -4,6 +4,7 @@ package com.example.societyfest.service;
 import com.example.societyfest.dto.DonationRequest;
 import com.example.societyfest.dto.DonationResponse;
 import com.example.societyfest.entity.Donation;
+import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,9 +61,11 @@ public class DonationService {
                 .build();
     }
 
-    public Page<DonationResponse> getDonationsByYear(int year, Pageable pageable) {
+    public Page<DonationResponse> getDonationsByYear(int year,
+                                                     String building,PaymentMode paymentMode,
+                                                     LocalDate date,Pageable pageable) {
         try {
-            return donationRepo.findAllByYear(year,pageable)
+            return donationRepo.findByYearAndFilters(year,building,paymentMode,date,pageable)
                     .map(this::toResponse);
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
