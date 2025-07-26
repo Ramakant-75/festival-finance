@@ -1,0 +1,14 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/societyfest_prod
+    username: produser
+    password: India@7506
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate   # validate schema but do not update
+    properties:
+      hibernate:
+        format_sql: false
+server:
+  port: 80
