@@ -9,6 +9,8 @@ import com.example.societyfest.repository.ExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -152,5 +154,15 @@ public class ExpenseService {
         List<Expense> list = expenseRepo.findAllByYear(year);
         return list.stream().map(this::toResponse).collect(Collectors.toList());
     }
+
+    public Page<ExpenseResponse> getFilteredExpenses(Integer year, String category, String addedBy, Pageable pageable) {
+        Page<Expense> page = expenseRepo.findFiltered(year, category, addedBy, pageable);
+        return page.map(this::toResponse);
+    }
+
+    public Double getFilteredTotal(Integer year, String category, String addedBy) {
+        return expenseRepo.getTotalAmountFiltered(year, category, addedBy);
+    }
+
 
 }

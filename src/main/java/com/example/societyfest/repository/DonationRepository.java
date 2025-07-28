@@ -54,4 +54,19 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
             @Param("date") java.time.LocalDate date
     );
 
+    @Query("""
+  SELECT SUM(d.amount) FROM Donation d
+  WHERE YEAR(d.date) = :year
+    AND (:building IS NULL OR d.building = :building)
+    AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
+    AND (:date IS NULL OR d.date = :date)
+""")
+    Double findTotalByFilters(
+            @Param("year") int year,
+            @Param("building") String building,
+            @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
+            @Param("date") java.time.LocalDate date
+    );
+
+
 }

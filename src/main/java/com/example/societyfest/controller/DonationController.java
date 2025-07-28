@@ -12,10 +12,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 
-import java.awt.print.Pageable;
 import java.time.LocalDate;
 
 @Slf4j
@@ -46,6 +46,7 @@ public class DonationController {
         return ResponseEntity.ok(donationService.getDonationsByYear(year,building,paymentMode,date,pageRequest));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request){
         donationService.updateDonation(id, request);
@@ -65,6 +66,17 @@ public class DonationController {
         log.info("year : {} ", year);
         boolean exists = donationRepository.existsByRoomNumberAndYear(building, roomNumber, year);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/total")
+    public ResponseEntity<Double> getFilteredTotal(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String building,
+            @RequestParam(required = false) PaymentMode paymentMode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        Double total = donationService.getFilteredTotal(year, building, paymentMode,date);
+        return ResponseEntity.ok(total != null ? total : 0.0);
     }
 
 }

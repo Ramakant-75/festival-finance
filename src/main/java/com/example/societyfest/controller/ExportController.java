@@ -13,6 +13,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +29,7 @@ public class ExportController {
     private final DonationRepository donationRepo;
     private final ExpenseRepository expenseRepo;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/donations")
     public ResponseEntity<InputStreamResource> exportDonations(
             @RequestParam int year,
@@ -45,6 +47,7 @@ public class ExportController {
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/expenses")
     public ResponseEntity<InputStreamResource> exportExpenses() {
         var excelStream = ExcelGenerator.expensesToExcel(expenseRepo.findAll());
@@ -54,16 +57,17 @@ public class ExportController {
                 .body(new InputStreamResource(excelStream));
     }
 
-@GetMapping("/festival-report")
-public ResponseEntity<InputStreamResource> generateFestivalReport(@RequestParam int year) {
-    List<Expense> expenses = expenseRepo.findAllByYear(year); // Custom repo method
-    double totalDonations = donationRepo.sumAmountByYear(year);
-    double totalExpenses = expenses.stream().mapToDouble(Expense::getAmount).sum();
-    double balance = totalDonations - totalExpenses;
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/festival-report")
+    public ResponseEntity<InputStreamResource> generateFestivalReport(@RequestParam int year) {
+        List<Expense> expenses = expenseRepo.findAllByYear(year); // Custom repo method
+        double totalDonations = donationRepo.sumAmountByYear(year);
+        double totalExpenses = expenses.stream().mapToDouble(Expense::getAmount).sum();
+        double balance = totalDonations - totalExpenses;
 
-    ByteArrayInputStream pdf = PdfGenerator.generateFestivalReport(totalDonations, totalExpenses, balance, expenses,year);
+        ByteArrayInputStream pdf = PdfGenerator.generateFestivalReport(totalDonations, totalExpenses, balance, expenses,year);
 
-    return ResponseEntity.ok()
+        return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=festival-report-" + year + ".pdf")
             .contentType(MediaType.APPLICATION_PDF)
             .body(new InputStreamResource(pdf));

@@ -87,5 +87,9 @@ public class DonationService {
 
         donationRepo.save(donation);
     }
+
+    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date) {
+        return donationRepo.findTotalByFilters(year, building, paymentMode,date);
+    }
 }
 
