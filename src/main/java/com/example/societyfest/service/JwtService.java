@@ -3,21 +3,24 @@ package com.example.societyfest.service;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.Key;
 import java.util.Date;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.secret}")
-    private String jwtSecret;
+    @Value("${jwt.secret-file}")
+    private String jwtSecretFilePath;
 
     @Value("${jwt.expirationMs}")
     private long jwtExpirationMs;
@@ -26,14 +29,22 @@ public class JwtService {
 
     @PostConstruct
     public void init() {
-        key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        try {
+            String secret = Files.readString(Paths.get(jwtSecretFilePath)).trim();
+            key = Keys.hmacShaKeyFor(secret.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read JWT secret from file: " + jwtSecretFilePath, e);
+        }
     }
 
     public String generateToken(UserDetails userDetails) {
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(Object::toString)
+                .toList();
+
         return Jwts.builder()
                 .setSubject(userDetails.getUsername())
-                .claim("roles", userDetails.getAuthorities().stream()
-                        .map(Object::toString).collect(Collectors.toList()))
+                .claim("roles", roles)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key, SignatureAlgorithm.HS256)
@@ -54,7 +65,10 @@ public class JwtService {
     }
 
     private Claims extractClaims(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build()
-                .parseClaimsJws(token).getBody();
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

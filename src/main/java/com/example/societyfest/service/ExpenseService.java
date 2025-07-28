@@ -2,6 +2,7 @@ package com.example.societyfest.service;
 
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
+import com.example.societyfest.dto.ExpenseUpdateRequest;
 import com.example.societyfest.entity.Expense;
 import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
@@ -107,7 +108,7 @@ public class ExpenseService {
     }
 
 
-    public ExpenseResponse updateExpense(Long id, ExpenseRequest req) {
+    public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req) {
         Expense expense = expenseRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Expense not found"));
 

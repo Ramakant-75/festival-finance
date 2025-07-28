@@ -2,6 +2,7 @@ package com.example.societyfest.controller;
 
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
+import com.example.societyfest.dto.ExpenseUpdateRequest;
 import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
@@ -60,7 +61,7 @@ public class ExpenseController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseRequest req) {
+    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req) {
         return ResponseEntity.ok(expenseService.updateExpense(id, req));
     }
 

@@ -48,7 +48,12 @@ public class AuthController {
             UserDetails ud = (UserDetails) auth.getPrincipal();
 
             String token = jwtService.generateToken(ud);
-            return ResponseEntity.ok(new AuthResponse(token));
+            String role = ud.getAuthorities().stream()
+                    .findFirst()
+                    .map(granted -> granted.getAuthority())
+                    .orElse("USER");
+
+            return ResponseEntity.ok(new AuthResponse(token,ud.getUsername(),role));
     }
 
     @GetMapping("/me")

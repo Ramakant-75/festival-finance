@@ -14,5 +14,5 @@ server:
   port: 8090
 
 jwt:
-  secret: B97f830aA72e3d6FCE190bDf81C0Ea912F7cEB934D271CeAcB4F1998e5a7C7F6
+  secret-file: /Users/ramakant/Documents/ramakant/project_env_files/secret_local.txt
   expirationMs: 86400000
