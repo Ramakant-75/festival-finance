@@ -62,6 +62,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth ->
                         auth
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/rag/chunks").permitAll()
+                                .requestMatchers("/api/chat").permitAll()
                                 .requestMatchers("/api/export/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                 )

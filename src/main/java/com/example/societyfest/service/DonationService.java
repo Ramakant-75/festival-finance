@@ -70,7 +70,7 @@ public class DonationService {
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
         }
-        return null;
+        return Page.empty(pageable);
     }
 
     public void updateDonation(Long id, DonationRequest req) {
