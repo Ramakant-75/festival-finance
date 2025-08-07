@@ -31,5 +31,16 @@ public class Expense {
 
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ExpenseReceipt> receipts;
+
+    // inside class Expense
+    public Expense(Expense other) {
+        this.id = other.id;
+        this.category = other.category;
+        this.amount = other.amount;
+        this.date = other.date;
+        this.description = other.description;
+        this.addedBy = other.addedBy;
+    }
+
 }
 

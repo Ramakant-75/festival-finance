@@ -7,6 +7,7 @@ import com.example.societyfest.entity.Expense;
 import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +28,12 @@ import java.util.stream.Collectors;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepo;
+    private final AuditLogService auditLogService;
 
     @Autowired
     private ExpenseReceiptRepository receiptRepo;
 
-    public ExpenseResponse addExpense(ExpenseRequest req) {
+    public ExpenseResponse addExpense(ExpenseRequest req, HttpServletRequest request) {
         boolean hasReceipt = (req.getReceipts() != null && req.getReceipts().length > 0);
 
         Expense expense = Expense.builder()
@@ -62,6 +64,7 @@ public class ExpenseService {
             }
         }
 
+        auditLogService.logChange("ADD_EXPENSE", "EXPENSE", expense.getId().toString(), null, toResponse(expense), request);
         return toResponse(savedExpense);
     }
 
@@ -108,9 +111,12 @@ public class ExpenseService {
     }
 
 
-    public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req) {
+    public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req, HttpServletRequest request) {
         Expense expense = expenseRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpenseResponse before = toResponse(new Expense(expense));
+
 
         expense.setCategory(req.getCategory());
         expense.setAmount(req.getAmount());
@@ -118,8 +124,15 @@ public class ExpenseService {
         expense.setDescription(req.getDescription());
         expense.setAddedBy(req.getAddedBy());
 
-        expenseRepo.save(expense);
-        return toResponse(expense);
+        Expense updated = expenseRepo.save(expense);
+
+        ExpenseResponse after = toResponse(updated);
+
+        log.info("before : {}  & after : {}", before, after);
+
+        auditLogService.logChange("EDIT_EXPENSE", "EXPENSE", expense.getId().toString(), before, after, request);
+
+        return toResponse(updated);
     }
 
     public ExpenseResponse saveExpenseWithImage(ExpenseRequest req, MultipartFile image) {

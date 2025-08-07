@@ -7,6 +7,7 @@ import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import com.example.societyfest.service.ExpenseService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -39,9 +40,10 @@ public class ExpenseController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ExpenseResponse> addExpense(
-            @ModelAttribute ExpenseRequest request
+            @ModelAttribute ExpenseRequest request,
+            HttpServletRequest httpServletRequest
     ) {
-        return ResponseEntity.ok(expenseService.addExpense(request));
+        return ResponseEntity.ok(expenseService.addExpense(request,httpServletRequest));
     }
 
 
@@ -61,8 +63,8 @@ public class ExpenseController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req) {
-        return ResponseEntity.ok(expenseService.updateExpense(id, req));
+    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req, HttpServletRequest httpServletRequest) {
+        return ResponseEntity.ok(expenseService.updateExpense(id, req,httpServletRequest));
     }
 
     @PostMapping("/upload")

@@ -5,6 +5,7 @@ import com.example.societyfest.dto.DonationResponse;
 import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
 import com.example.societyfest.service.DonationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,9 +31,9 @@ public class DonationController {
     private DonationRepository donationRepository;
 
     @PostMapping
-    public ResponseEntity<DonationResponse> add(@RequestBody DonationRequest request) {
+    public ResponseEntity<DonationResponse> add(@RequestBody DonationRequest request, HttpServletRequest httpServletRequest) {
         log.info("calling add api ---> ");
-        return ResponseEntity.ok(donationService.addDonation(request));
+        return ResponseEntity.ok(donationService.addDonation(request,httpServletRequest));
     }
 
     @GetMapping
@@ -48,8 +49,9 @@ public class DonationController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request){
-        donationService.updateDonation(id, request);
+    public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request,
+                                            HttpServletRequest httpServletRequest){
+        donationService.updateDonation(id, request,httpServletRequest);
         return ResponseEntity.ok("Donation updated");
     }
 
