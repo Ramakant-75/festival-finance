@@ -3,6 +3,7 @@ package com.example.societyfest.controller;
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
 import com.example.societyfest.dto.ExpenseUpdateRequest;
+import com.example.societyfest.dto.PaymentRequest;
 import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
@@ -109,7 +110,25 @@ public class ExpenseController {
         return ResponseEntity.ok(total != null ? total : 0.0);
     }
 
+    @GetMapping("/total-paid")
+    public ResponseEntity<Double> getFilteredTotalPaid(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String addedBy
+    ) {
+        Double total = expenseService.getTotalPaid(category, year, addedBy);
+        return ResponseEntity.ok(total != null ? total : 0.0);
+    }
 
+    @PostMapping("/{expenseId}/payments")
+    public ResponseEntity<ExpenseResponse> addPayment(
+            @PathVariable Long expenseId,
+            @RequestBody PaymentRequest paymentRequest,
+            HttpServletRequest httpServletRequest
+    ) {
+        ExpenseResponse response = expenseService.addPaymentToExpense(expenseId, paymentRequest, httpServletRequest);
+        return ResponseEntity.ok(response);
+    }
 
 }
 

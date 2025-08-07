@@ -1,10 +1,10 @@
 package com.example.societyfest.service;
 
-import com.example.societyfest.dto.ExpenseRequest;
-import com.example.societyfest.dto.ExpenseResponse;
-import com.example.societyfest.dto.ExpenseUpdateRequest;
+import com.example.societyfest.dto.*;
 import com.example.societyfest.entity.Expense;
+import com.example.societyfest.entity.ExpensePayment;
 import com.example.societyfest.entity.ExpenseReceipt;
+import com.example.societyfest.repository.ExpensePaymentRepository;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +29,7 @@ public class ExpenseService {
 
     private final ExpenseRepository expenseRepo;
     private final AuditLogService auditLogService;
+    private final ExpensePaymentRepository expensePaymentRepository;
 
     @Autowired
     private ExpenseReceiptRepository receiptRepo;
@@ -91,11 +92,23 @@ public class ExpenseService {
 
     private ExpenseResponse toResponse(Expense e) {
         List<ExpenseReceipt> receiptList = receiptRepo.findByExpenseId(e.getId());
-
         boolean hasReceipt = !receiptList.isEmpty();
 
         List<ExpenseResponse.ReceiptMetadata> receiptMetadataList = receiptList.stream()
                 .map(r -> new ExpenseResponse.ReceiptMetadata(r.getId(), r.getFileName()))
+                .collect(Collectors.toList());
+
+        List<ExpensePayment> payments = e.getPayments() != null ? e.getPayments() : new ArrayList<>();
+
+        List<PaymentResponse> paymentResponses = payments.stream()
+                .map(p -> PaymentResponse.builder()
+                        .id(p.getId())
+                        .amount(p.getAmount())
+                        .paymentDate(p.getPaymentDate())
+                        .paidBy(p.getPaidBy())
+                        .note(p.getNote())
+                        .paymentMethod(p.getPaymentMethod())
+                        .build())
                 .collect(Collectors.toList());
 
         return ExpenseResponse.builder()
@@ -107,8 +120,12 @@ public class ExpenseService {
                 .addedBy(e.getAddedBy())
                 .hasReceipt(hasReceipt)
                 .receipts(receiptMetadataList)
+                .totalPaid(e.getTotalPaid())
+                .balanceAmount(e.getBalanceAmount())
+                .payments(paymentResponses)
                 .build();
     }
+
 
 
     public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req, HttpServletRequest request) {
@@ -127,8 +144,6 @@ public class ExpenseService {
         Expense updated = expenseRepo.save(expense);
 
         ExpenseResponse after = toResponse(updated);
-
-        log.info("before : {}  & after : {}", before, after);
 
         auditLogService.logChange("EDIT_EXPENSE", "EXPENSE", expense.getId().toString(), before, after, request);
 
@@ -176,6 +191,31 @@ public class ExpenseService {
 
     public Double getFilteredTotal(Integer year, String category, String addedBy) {
         return expenseRepo.getTotalAmountFiltered(year, category, addedBy);
+    }
+
+    public Double getTotalPaid(String category , Integer year, String addedBy) {
+        return expensePaymentRepository.getTotalPaid(category, year, addedBy);
+    }
+
+    public ExpenseResponse addPaymentToExpense(Long expenseId, PaymentRequest paymentRequest, HttpServletRequest request) {
+        Expense expense = expenseRepo.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpensePayment payment = ExpensePayment.builder()
+                .amount(paymentRequest.getAmount())
+                .paymentDate(paymentRequest.getPaymentDate())
+                .paidBy(paymentRequest.getPaidBy())
+                .note(paymentRequest.getNote())
+                .paymentMethod(paymentRequest.getPaymentMethod())
+                .expense(expense)
+                .build();
+
+        expense.getPayments().add(payment);
+        expenseRepo.save(expense);
+
+        auditLogService.logChange("ADD_PAYMENT", "EXPENSE_PAYMENT", expenseId.toString(), null, paymentRequest, request);
+
+        return toResponse(expense);
     }
 
 

@@ -32,7 +32,18 @@ public class Expense {
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ExpenseReceipt> receipts;
 
-    // inside class Expense
+    @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL)
+    private List<ExpensePayment> payments = new ArrayList<>();
+
+    public Double getTotalPaid() {
+        if (payments == null) return 0.0;
+        return payments.stream().mapToDouble(p -> p.getAmount()).sum();
+    }
+
+    public Double getBalanceAmount() {
+        return this.amount - getTotalPaid();
+    }
+
     public Expense(Expense other) {
         this.id = other.id;
         this.category = other.category;
@@ -40,7 +51,7 @@ public class Expense {
         this.date = other.date;
         this.description = other.description;
         this.addedBy = other.addedBy;
+        this.receipts = other.getReceipts() != null ? new ArrayList<>(other.getReceipts()) : new ArrayList<>();
+        this.payments = other.getPayments() != null ? new ArrayList<>(other.getPayments()) : new ArrayList<>();
     }
-
 }
-
