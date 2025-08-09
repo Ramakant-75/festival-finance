@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, Long> {
 
     @Query(value = """
@@ -19,4 +21,6 @@ public interface ExpensePaymentRepository extends JpaRepository<ExpensePayment, 
                         @Param("year") Integer year,
                         @Param("addedBy") String addedBy);
 
+    @Query(value = "SELECT * FROM expense_payment ep WHERE ep.expense_id = :expenseId",nativeQuery = true)
+    List<ExpensePayment> findByExpenseId(Long expenseId);
 }

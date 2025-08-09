@@ -179,10 +179,48 @@ public class ExpenseService {
         return toResponse(expense);
     }
 
-    public List<ExpenseResponse> getExpensesByYear(int year) {
-        List<Expense> list = expenseRepo.findAllByYear(year);
-        return list.stream().map(this::toResponse).collect(Collectors.toList());
+    public List<ExpenseResponse> getAllDetailedExpenseResponses() {
+        List<Expense> expenses = expenseRepo.findAll();
+        log.info("begin expense service");
+        List<ExpenseResponse> responses = new ArrayList<>();
+
+        for (Expense expense : expenses) {
+            List<ExpensePayment> payments = expensePaymentRepository.findByExpenseId(expense.getId());
+
+            List<PaymentResponse> paymentResponses = payments.stream()
+                    .map(payment -> PaymentResponse.builder()
+                            .id(payment.getId())
+                            .amount(payment.getAmount())
+                            .paymentDate(payment.getPaymentDate())
+                            .paidBy(payment.getPaidBy())
+                            .note(payment.getNote())
+                            .paymentMethod(payment.getPaymentMethod())
+                            .build())
+                    .collect(Collectors.toList());
+
+            double paidAmount = payments.stream().mapToDouble(ExpensePayment::getAmount).sum();
+            double balance = expense.getAmount() - paidAmount;
+
+            ExpenseResponse response = ExpenseResponse.builder()
+                    .id(expense.getId())
+                    .category(expense.getCategory())
+                    .amount(expense.getAmount())
+                    .date(expense.getDate())
+                    .description(expense.getDescription())
+                    .addedBy(expense.getAddedBy())
+                    .totalPaid(paidAmount)
+                    .balanceAmount(balance)
+                    .payments(paymentResponses)
+                    .build();
+
+            responses.add(response);
+            log.info("end expense service");
+        }
+
+        return responses;
     }
+
+
 
     public Page<ExpenseResponse> getFilteredExpenses(Integer year, String category, String addedBy, Pageable pageable) {
         Page<Expense> page = expenseRepo.findFiltered(year, category, addedBy, pageable);

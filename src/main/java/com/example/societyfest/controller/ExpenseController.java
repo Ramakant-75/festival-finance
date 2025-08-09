@@ -62,7 +62,7 @@ public class ExpenseController {
     }
 
 
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req, HttpServletRequest httpServletRequest) {
         return ResponseEntity.ok(expenseService.updateExpense(id, req,httpServletRequest));

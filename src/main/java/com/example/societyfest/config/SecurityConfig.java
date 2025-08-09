@@ -64,7 +64,8 @@ public class SecurityConfig {
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/rag/chunks").permitAll()
                                 .requestMatchers("/api/chat").permitAll()
-                                .requestMatchers("/api/export/**").hasRole("ADMIN")
+                                .requestMatchers("/api/export/**").permitAll()
+                                .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
