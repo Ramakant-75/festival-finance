@@ -22,4 +22,4 @@ RUN ./mvnw clean package -DskipTests
 EXPOSE 8090
 
 # Run the Spring Boot app
-CMD ["java", "-jar", "target/*.jar"]
+CMD ["java", "-jar", "target/societyfest-0.0.1-SNAPSHOT.jar"]
