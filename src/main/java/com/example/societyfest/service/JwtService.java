@@ -19,8 +19,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JwtService {
 
-    @Value("${jwt.secret-file}")
-    private String jwtSecretFilePath;
+//    @Value("${jwt.secret-file}")
+//    private String jwtSecretFilePath;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
 
     @Value("${jwt.expirationMs}")
     private long jwtExpirationMs;
@@ -30,10 +34,11 @@ public class JwtService {
     @PostConstruct
     public void init() {
         try {
-            String secret = Files.readString(Paths.get(jwtSecretFilePath)).trim();
+//            String secret = Files.readString(Paths.get(jwtSecretFilePath)).trim();
+            String secret = jwtSecret;
             key = Keys.hmacShaKeyFor(secret.getBytes());
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to read JWT secret from file: " + jwtSecretFilePath, e);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read JWT secret from file: " + jwtSecret, e);
         }
     }
 
