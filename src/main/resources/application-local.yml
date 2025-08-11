@@ -12,3 +12,7 @@ spring:
         format_sql: true
 server:
   port: 8090
+
+jwt:
+  secret-file: /Users/ramakant/Documents/ramakant/project_env_files/secret_local.txt
+  expirationMs: 86400000

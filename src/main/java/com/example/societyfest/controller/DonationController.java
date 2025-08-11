@@ -5,6 +5,7 @@ import com.example.societyfest.dto.DonationResponse;
 import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
 import com.example.societyfest.service.DonationService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 
-import java.awt.print.Pageable;
 import java.time.LocalDate;
 
 @Slf4j
@@ -30,9 +30,9 @@ public class DonationController {
     private DonationRepository donationRepository;
 
     @PostMapping
-    public ResponseEntity<DonationResponse> add(@RequestBody DonationRequest request) {
+    public ResponseEntity<DonationResponse> add(@RequestBody DonationRequest request, HttpServletRequest httpServletRequest) {
         log.info("calling add api ---> ");
-        return ResponseEntity.ok(donationService.addDonation(request));
+        return ResponseEntity.ok(donationService.addDonation(request,httpServletRequest));
     }
 
     @GetMapping
@@ -46,9 +46,11 @@ public class DonationController {
         return ResponseEntity.ok(donationService.getDonationsByYear(year,building,paymentMode,date,pageRequest));
     }
 
+//    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request){
-        donationService.updateDonation(id, request);
+    public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request,
+                                            HttpServletRequest httpServletRequest){
+        donationService.updateDonation(id, request,httpServletRequest);
         return ResponseEntity.ok("Donation updated");
     }
 
@@ -65,6 +67,17 @@ public class DonationController {
         log.info("year : {} ", year);
         boolean exists = donationRepository.existsByRoomNumberAndYear(building, roomNumber, year);
         return ResponseEntity.ok(exists);
+    }
+
+    @GetMapping("/total")
+    public ResponseEntity<Double> getFilteredTotal(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String building,
+            @RequestParam(required = false) PaymentMode paymentMode,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        Double total = donationService.getFilteredTotal(year, building, paymentMode,date);
+        return ResponseEntity.ok(total != null ? total : 0.0);
     }
 
 }

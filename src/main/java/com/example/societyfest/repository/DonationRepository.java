@@ -2,6 +2,7 @@ package com.example.societyfest.repository;
 
 
 import com.example.societyfest.entity.Donation;
+import com.example.societyfest.enums.PaymentMode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -53,5 +54,25 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
             @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
             @Param("date") java.time.LocalDate date
     );
+
+    @Query("""
+  SELECT SUM(d.amount) FROM Donation d
+  WHERE YEAR(d.date) = :year
+    AND (:building IS NULL OR d.building = :building)
+    AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
+    AND (:date IS NULL OR d.date = :date)
+""")
+    Double findTotalByFilters(
+            @Param("year") int year,
+            @Param("building") String building,
+            @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
+            @Param("date") java.time.LocalDate date
+    );
+
+    @Query("SELECT COUNT(d) FROM Donation d WHERE d.paymentMode = :paymentMode AND YEAR(d.date) = :year")
+    Long countByPaymentModeAndYear(@Param("paymentMode") PaymentMode paymentMode, @Param("year") int year);
+
+    @Query("SELECT SUM(d.amount) FROM Donation d WHERE d.paymentMode = :paymentMode AND YEAR(d.date) = :year")
+    Double sumByModeAndYear(@Param("paymentMode") PaymentMode paymentMode, @Param("year") int year);
 
 }

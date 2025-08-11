@@ -39,4 +39,14 @@ public class Donation {
             this.date = LocalDate.now();
         }
     }
+
+    public Donation(Donation other) {
+        this.id = other.id;
+        this.building = other.building;
+        this.roomNumber = other.roomNumber;
+        this.amount = other.amount;
+        this.paymentMode = other.paymentMode;
+        this.date = other.date;
+        this.remarks = other.remarks;
+    }
 }

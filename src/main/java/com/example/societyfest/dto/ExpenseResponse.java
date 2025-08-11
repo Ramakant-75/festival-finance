@@ -19,6 +19,9 @@ public class ExpenseResponse {
     private String addedBy;
     private List<String> receiptFileNames;
     private boolean hasReceipt;
+    private Double totalPaid;
+    private Double balanceAmount;
+    private List<PaymentResponse> payments;
     private List<ReceiptMetadata> receipts;
 
     @Data

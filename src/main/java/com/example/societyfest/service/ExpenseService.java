@@ -1,14 +1,18 @@
 package com.example.societyfest.service;
 
-import com.example.societyfest.dto.ExpenseRequest;
-import com.example.societyfest.dto.ExpenseResponse;
+import com.example.societyfest.dto.*;
 import com.example.societyfest.entity.Expense;
+import com.example.societyfest.entity.ExpensePayment;
 import com.example.societyfest.entity.ExpenseReceipt;
+import com.example.societyfest.repository.ExpensePaymentRepository;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,11 +28,13 @@ import java.util.stream.Collectors;
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepo;
+    private final AuditLogService auditLogService;
+    private final ExpensePaymentRepository expensePaymentRepository;
 
     @Autowired
     private ExpenseReceiptRepository receiptRepo;
 
-    public ExpenseResponse addExpense(ExpenseRequest req) {
+    public ExpenseResponse addExpense(ExpenseRequest req, HttpServletRequest request) {
         boolean hasReceipt = (req.getReceipts() != null && req.getReceipts().length > 0);
 
         Expense expense = Expense.builder()
@@ -59,6 +65,7 @@ public class ExpenseService {
             }
         }
 
+        auditLogService.logChange("ADD_EXPENSE", "EXPENSE", expense.getId().toString(), null, toResponse(expense), request);
         return toResponse(savedExpense);
     }
 
@@ -85,11 +92,23 @@ public class ExpenseService {
 
     private ExpenseResponse toResponse(Expense e) {
         List<ExpenseReceipt> receiptList = receiptRepo.findByExpenseId(e.getId());
-
         boolean hasReceipt = !receiptList.isEmpty();
 
         List<ExpenseResponse.ReceiptMetadata> receiptMetadataList = receiptList.stream()
                 .map(r -> new ExpenseResponse.ReceiptMetadata(r.getId(), r.getFileName()))
+                .collect(Collectors.toList());
+
+        List<ExpensePayment> payments = e.getPayments() != null ? e.getPayments() : new ArrayList<>();
+
+        List<PaymentResponse> paymentResponses = payments.stream()
+                .map(p -> PaymentResponse.builder()
+                        .id(p.getId())
+                        .amount(p.getAmount())
+                        .paymentDate(p.getPaymentDate())
+                        .paidBy(p.getPaidBy())
+                        .note(p.getNote())
+                        .paymentMethod(p.getPaymentMethod())
+                        .build())
                 .collect(Collectors.toList());
 
         return ExpenseResponse.builder()
@@ -101,13 +120,20 @@ public class ExpenseService {
                 .addedBy(e.getAddedBy())
                 .hasReceipt(hasReceipt)
                 .receipts(receiptMetadataList)
+                .totalPaid(e.getTotalPaid())
+                .balanceAmount(e.getBalanceAmount())
+                .payments(paymentResponses)
                 .build();
     }
 
 
-    public ExpenseResponse updateExpense(Long id, ExpenseRequest req) {
+
+    public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req, HttpServletRequest request) {
         Expense expense = expenseRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpenseResponse before = toResponse(new Expense(expense));
+
 
         expense.setCategory(req.getCategory());
         expense.setAmount(req.getAmount());
@@ -115,8 +141,13 @@ public class ExpenseService {
         expense.setDescription(req.getDescription());
         expense.setAddedBy(req.getAddedBy());
 
-        expenseRepo.save(expense);
-        return toResponse(expense);
+        Expense updated = expenseRepo.save(expense);
+
+        ExpenseResponse after = toResponse(updated);
+
+        auditLogService.logChange("EDIT_EXPENSE", "EXPENSE", expense.getId().toString(), before, after, request);
+
+        return toResponse(updated);
     }
 
     public ExpenseResponse saveExpenseWithImage(ExpenseRequest req, MultipartFile image) {
@@ -148,9 +179,82 @@ public class ExpenseService {
         return toResponse(expense);
     }
 
-    public List<ExpenseResponse> getExpensesByYear(int year) {
-        List<Expense> list = expenseRepo.findAllByYear(year);
-        return list.stream().map(this::toResponse).collect(Collectors.toList());
+    public List<ExpenseResponse> getAllDetailedExpenseResponses() {
+        List<Expense> expenses = expenseRepo.findAll();
+        log.info("begin expense service");
+        List<ExpenseResponse> responses = new ArrayList<>();
+
+        for (Expense expense : expenses) {
+            List<ExpensePayment> payments = expensePaymentRepository.findByExpenseId(expense.getId());
+
+            List<PaymentResponse> paymentResponses = payments.stream()
+                    .map(payment -> PaymentResponse.builder()
+                            .id(payment.getId())
+                            .amount(payment.getAmount())
+                            .paymentDate(payment.getPaymentDate())
+                            .paidBy(payment.getPaidBy())
+                            .note(payment.getNote())
+                            .paymentMethod(payment.getPaymentMethod())
+                            .build())
+                    .collect(Collectors.toList());
+
+            double paidAmount = payments.stream().mapToDouble(ExpensePayment::getAmount).sum();
+            double balance = expense.getAmount() - paidAmount;
+
+            ExpenseResponse response = ExpenseResponse.builder()
+                    .id(expense.getId())
+                    .category(expense.getCategory())
+                    .amount(expense.getAmount())
+                    .date(expense.getDate())
+                    .description(expense.getDescription())
+                    .addedBy(expense.getAddedBy())
+                    .totalPaid(paidAmount)
+                    .balanceAmount(balance)
+                    .payments(paymentResponses)
+                    .build();
+
+            responses.add(response);
+            log.info("end expense service");
+        }
+
+        return responses;
     }
+
+
+
+    public Page<ExpenseResponse> getFilteredExpenses(Integer year, String category, String addedBy, Pageable pageable) {
+        Page<Expense> page = expenseRepo.findFiltered(year, category, addedBy, pageable);
+        return page.map(this::toResponse);
+    }
+
+    public Double getFilteredTotal(Integer year, String category, String addedBy) {
+        return expenseRepo.getTotalAmountFiltered(year, category, addedBy);
+    }
+
+    public Double getTotalPaid(String category , Integer year, String addedBy) {
+        return expensePaymentRepository.getTotalPaid(category, year, addedBy);
+    }
+
+    public ExpenseResponse addPaymentToExpense(Long expenseId, PaymentRequest paymentRequest, HttpServletRequest request) {
+        Expense expense = expenseRepo.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpensePayment payment = ExpensePayment.builder()
+                .amount(paymentRequest.getAmount())
+                .paymentDate(paymentRequest.getPaymentDate())
+                .paidBy(paymentRequest.getPaidBy())
+                .note(paymentRequest.getNote())
+                .paymentMethod(paymentRequest.getPaymentMethod())
+                .expense(expense)
+                .build();
+
+        expense.getPayments().add(payment);
+        expenseRepo.save(expense);
+
+        auditLogService.logChange("ADD_PAYMENT", "EXPENSE_PAYMENT", expenseId.toString(), null, paymentRequest, request);
+
+        return toResponse(expense);
+    }
+
 
 }

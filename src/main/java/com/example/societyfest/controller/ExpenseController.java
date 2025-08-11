@@ -2,16 +2,24 @@ package com.example.societyfest.controller;
 
 import com.example.societyfest.dto.ExpenseRequest;
 import com.example.societyfest.dto.ExpenseResponse;
+import com.example.societyfest.dto.ExpenseUpdateRequest;
+import com.example.societyfest.dto.PaymentRequest;
 import com.example.societyfest.entity.ExpenseReceipt;
 import com.example.societyfest.repository.ExpenseReceiptRepository;
 import com.example.societyfest.repository.ExpenseRepository;
 import com.example.societyfest.service.ExpenseService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,23 +41,31 @@ public class ExpenseController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ExpenseResponse> addExpense(
-            @ModelAttribute ExpenseRequest request
+            @ModelAttribute ExpenseRequest request,
+            HttpServletRequest httpServletRequest
     ) {
-        return ResponseEntity.ok(expenseService.addExpense(request));
+        return ResponseEntity.ok(expenseService.addExpense(request,httpServletRequest));
     }
 
 
     @GetMapping
-    public ResponseEntity<List<ExpenseResponse>> list(@RequestParam(required = false) Integer year) {
-        if (year != null) {
-            return ResponseEntity.ok(expenseService.getExpensesByYear(year));
-        }
-        return ResponseEntity.ok(expenseService.getAllExpenses());
+    public ResponseEntity<Page<ExpenseResponse>> list(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String addedBy,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("date").descending());
+        Page<ExpenseResponse> result = expenseService.getFilteredExpenses(year, category, addedBy, pageable);
+        return ResponseEntity.ok(result);
     }
 
+
+//    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseRequest req) {
-        return ResponseEntity.ok(expenseService.updateExpense(id, req));
+    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req, HttpServletRequest httpServletRequest) {
+        return ResponseEntity.ok(expenseService.updateExpense(id, req,httpServletRequest));
     }
 
     @PostMapping("/upload")
@@ -84,8 +100,35 @@ public class ExpenseController {
     }
 
 
+    @GetMapping("/total")
+    public ResponseEntity<Double> getFilteredTotal(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String addedBy
+    ) {
+        Double total = expenseService.getFilteredTotal(year, category, addedBy);
+        return ResponseEntity.ok(total != null ? total : 0.0);
+    }
 
+    @GetMapping("/total-paid")
+    public ResponseEntity<Double> getFilteredTotalPaid(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) String addedBy
+    ) {
+        Double total = expenseService.getTotalPaid(category, year, addedBy);
+        return ResponseEntity.ok(total != null ? total : 0.0);
+    }
 
+    @PostMapping("/{expenseId}/payments")
+    public ResponseEntity<ExpenseResponse> addPayment(
+            @PathVariable Long expenseId,
+            @RequestBody PaymentRequest paymentRequest,
+            HttpServletRequest httpServletRequest
+    ) {
+        ExpenseResponse response = expenseService.addPaymentToExpense(expenseId, paymentRequest, httpServletRequest);
+        return ResponseEntity.ok(response);
+    }
 
 }
 

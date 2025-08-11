@@ -6,6 +6,7 @@ import com.example.societyfest.dto.DonationResponse;
 import com.example.societyfest.entity.Donation;
 import com.example.societyfest.enums.PaymentMode;
 import com.example.societyfest.repository.DonationRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -22,8 +23,9 @@ import java.util.stream.Collectors;
 public class DonationService {
 
     private final DonationRepository donationRepo;
+    private final AuditLogService auditLogService;
 
-    public DonationResponse addDonation(DonationRequest req) {
+    public DonationResponse addDonation(DonationRequest req, HttpServletRequest request) {
         Donation donation = Donation.builder()
                 .roomNumber(req.getRoomNumber())
                 .amount(req.getAmount())
@@ -33,9 +35,11 @@ public class DonationService {
                 .remarks(req.getRemarks())
                 .build();
         donationRepo.save(donation);
-        log.info("date : {}" , req.getDate());
+        log.info("date : {}", req.getDate());
+        auditLogService.logChange("ADD_DONATION", "DONATION", donation.getId().toString(), null, toResponse(donation), request);
         return toResponse(donation);
     }
+
 
     public List<DonationResponse> getAll() {
         try {
@@ -70,14 +74,16 @@ public class DonationService {
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
         }
-        return null;
+        return Page.empty(pageable);
     }
 
-    public void updateDonation(Long id, DonationRequest req) {
+    public void updateDonation(Long id, DonationRequest req, HttpServletRequest request) {
         Donation donation = donationRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Donation not found"));
 
-        if (req.getDate() == null){
+        DonationResponse before = toResponse(new Donation(donation));
+
+        if (req.getDate() == null) {
             req.setDate(LocalDate.now());
         }
         donation.setAmount(req.getAmount());
@@ -85,7 +91,15 @@ public class DonationService {
         donation.setDate(req.getDate());
         donation.setRemarks(req.getRemarks());
 
-        donationRepo.save(donation);
+        Donation updated = donationRepo.save(donation);
+
+        DonationResponse after = toResponse(updated);
+
+        auditLogService.logChange("EDIT_DONATION", "DONATION", donation.getId().toString(), before, after, request);
+    }
+
+    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date) {
+        return donationRepo.findTotalByFilters(year, building, paymentMode,date);
     }
 }
 
