@@ -7,12 +7,16 @@ import com.example.societyfest.repository.UserRepository;
 import com.example.societyfest.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -40,21 +44,31 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginDto req) {
+    public ResponseEntity<?> login(@RequestBody LoginDto req) {
+        Authentication auth = authMgr.authenticate(
+                new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword())
+        );
+        UserDetails ud = (UserDetails) auth.getPrincipal();
 
-            Authentication auth = authMgr.authenticate(
-                    new UsernamePasswordAuthenticationToken(req.getUsername(), req.getPassword())
-            );
-            UserDetails ud = (UserDetails) auth.getPrincipal();
+        // Fetch actual User entity
+        User user = userRepo.findByUsername(ud.getUsername())
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-            String token = jwtService.generateToken(ud);
-            String role = ud.getAuthorities().stream()
-                    .findFirst()
-                    .map(granted -> granted.getAuthority())
-                    .orElse("USER");
+        // Check activation status
+        if (!"Y".equalsIgnoreCase(user.getIsActive())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Your account is not yet activated. Please contact admin."));
+        }
 
-            return ResponseEntity.ok(new AuthResponse(token,ud.getUsername(),role));
+        String token = jwtService.generateToken(ud);
+        String role = ud.getAuthorities().stream()
+                .findFirst()
+                .map(granted -> granted.getAuthority())
+                .orElse("USER");
+
+        return ResponseEntity.ok(new AuthResponse(token, ud.getUsername(), role));
     }
+
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(Authentication auth) {

@@ -6,10 +6,17 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: update   # validate schema but do not update
+      ddl-auto: validate   # validate schema but do not update
     properties:
       hibernate:
         format_sql: false
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 20MB
+      max-request-size: 50MB
+
 server:
   port: 8090
 
