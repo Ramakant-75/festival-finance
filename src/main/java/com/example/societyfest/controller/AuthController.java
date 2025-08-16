@@ -38,6 +38,7 @@ public class AuthController {
                 .username(req.getUsername())
                 .password(encoder.encode(req.getPassword()))
                 .role(Role.USER)
+                .isActive("N")
                 .build();
         userRepo.save(user);
         return ResponseEntity.ok("User registered successfully");
