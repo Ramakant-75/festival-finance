@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @Builder
 public class DonationResponse {
     private Long id;
+    private String name;
     private String building;
     private int floor;
     private String roomNumber;
@@ -22,4 +23,5 @@ public class DonationResponse {
     private LocalDate date;
 
     private String remarks;
+    private Boolean isExternal;
 }

@@ -20,12 +20,14 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
         AND (:building IS NULL OR d.building = :building)
         AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
         AND (:date IS NULL OR d.date = :date)
+        AND (:isExternal IS NULL OR d.isExternal = :isExternal)
     """)
     Page<Donation> findByYearAndFilters(
             @Param("year") int year,
             @Param("building") String building,
             @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
             @Param("date") java.time.LocalDate date,
+            @Param("isExternal") Boolean isExternal,
             Pageable pageable
     );
 
@@ -56,18 +58,23 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     );
 
     @Query("""
-  SELECT SUM(d.amount) FROM Donation d
-  WHERE YEAR(d.date) = :year
-    AND (:building IS NULL OR d.building = :building)
-    AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
-    AND (:date IS NULL OR d.date = :date)
-""")
+      SELECT SUM(d.amount) FROM Donation d
+      WHERE YEAR(d.date) = :year
+        AND (:building IS NULL OR d.building = :building)
+        AND (:paymentMode IS NULL OR d.paymentMode = :paymentMode)
+        AND (:date IS NULL OR d.date = :date)
+        AND (:isExternal IS NULL OR
+             (:isExternal = TRUE AND d.isExternal = TRUE) OR
+             (:isExternal = FALSE AND d.isExternal = FALSE))
+    """)
     Double findTotalByFilters(
             @Param("year") int year,
             @Param("building") String building,
             @Param("paymentMode") com.example.societyfest.enums.PaymentMode paymentMode,
-            @Param("date") java.time.LocalDate date
+            @Param("date") java.time.LocalDate date,
+            @Param("isExternal") Boolean isExternal
     );
+
 
     @Query("SELECT COUNT(d) FROM Donation d WHERE d.paymentMode = :paymentMode AND YEAR(d.date) = :year")
     Long countByPaymentModeAndYear(@Param("paymentMode") PaymentMode paymentMode, @Param("year") int year);

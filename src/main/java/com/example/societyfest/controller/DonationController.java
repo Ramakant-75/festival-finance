@@ -31,7 +31,6 @@ public class DonationController {
 
     @PostMapping
     public ResponseEntity<DonationResponse> add(@RequestBody DonationRequest request, HttpServletRequest httpServletRequest) {
-        log.info("calling add api ---> ");
         return ResponseEntity.ok(donationService.addDonation(request,httpServletRequest));
     }
 
@@ -41,9 +40,10 @@ public class DonationController {
                                                        @RequestParam(defaultValue = "10") int size,
                                                        @RequestParam(required = false) String building,
                                                        @RequestParam(required = false)PaymentMode paymentMode,
-                                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+                                                       @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+                                                       @RequestParam(required = false) Boolean isExternal) {
         PageRequest pageRequest = PageRequest.of(page,size);
-        return ResponseEntity.ok(donationService.getDonationsByYear(year,building,paymentMode,date,pageRequest));
+        return ResponseEntity.ok(donationService.getDonationsByYear(year,building,paymentMode,date,isExternal,pageRequest));
     }
 
 //    @PreAuthorize("hasRole('ADMIN')")
@@ -64,7 +64,6 @@ public class DonationController {
         if (year.equals("NaN")){
             year = String.valueOf(LocalDate.now().getYear());
         }
-        log.info("year : {} ", year);
         boolean exists = donationRepository.existsByRoomNumberAndYear(building, roomNumber, year);
         return ResponseEntity.ok(exists);
     }
@@ -74,9 +73,10 @@ public class DonationController {
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false) String building,
             @RequestParam(required = false) PaymentMode paymentMode,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) Boolean isExternal
     ) {
-        Double total = donationService.getFilteredTotal(year, building, paymentMode,date);
+        Double total = donationService.getFilteredTotal(year, building, paymentMode,date,isExternal);
         return ResponseEntity.ok(total != null ? total : 0.0);
     }
 

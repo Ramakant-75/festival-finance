@@ -4,6 +4,7 @@ import com.example.societyfest.dto.ExpenseResponse;
 import com.example.societyfest.entity.Donation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
@@ -19,10 +20,20 @@ public class ExcelGenerator {
 
     // ============================= DONATIONS EXPORT =============================
     public static InputStream donationsToExcel(List<Donation> donations) {
-        String[] headers = {"Building", "Room Number", "Amount", "Payment Mode", "Date", "Remarks"};
+        String[] headers = {"Building", "Room", "Amount", "Mode", "Date"};
+        String[] externalHeaders = {"Name", "Amount", "Mode", "Date"};
 
-        // Group donations by building
-        Map<String, Map<String, Donation>> donationsMap = donations.stream()
+        // Separate internal vs external
+        List<Donation> internalDonations = donations.stream()
+                .filter(d -> Boolean.FALSE.equals(d.getIsExternal()))
+                .toList();
+
+        List<Donation> externalDonations = donations.stream()
+                .filter(d -> Boolean.TRUE.equals(d.getIsExternal()))
+                .toList();
+
+        // Group donations by building for internal
+        Map<String, Map<String, Donation>> donationsMap = internalDonations.stream()
                 .collect(Collectors.groupingBy(
                         Donation::getBuilding,
                         Collectors.toMap(Donation::getRoomNumber, d -> d, (d1, d2) -> d1)
@@ -36,7 +47,24 @@ public class ExcelGenerator {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Donations");
 
-            // Header style
+            // ================== TITLE STYLE ==================
+            CellStyle titleStyle = workbook.createCellStyle();
+            Font titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 16);
+            titleStyle.setFont(titleFont);
+            titleStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Add main title at row 0
+            Row titleRow = sheet.createRow(0);
+            Cell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("Ganesh Festival Donations");
+            titleCell.setCellStyle(titleStyle);
+
+            // Merge title across first 5 columns
+            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, headers.length - 1));
+
+            // ================== HEADER STYLE ==================
             CellStyle headerStyle = workbook.createCellStyle();
             Font font = workbook.createFont();
             font.setBold(true);
@@ -48,15 +76,15 @@ public class ExcelGenerator {
             numberStyle.setDataFormat(workbook.createDataFormat().getFormat("0"));
 
             int colOffset = 0;
-            int rowOffset = 0;
+            int rowOffset = 2; // shift down by 2 rows
             int buildingsPerRow = (int) Math.ceil(sortedBuildings.size() / 2.0);
 
+            // === INTERNAL DONATIONS ===
             for (int bIndex = 0; bIndex < sortedBuildings.size(); bIndex++) {
                 String building = sortedBuildings.get(bIndex);
 
-                // Calculate position: 2 rows of tables
-                int tableRowGroup = bIndex / buildingsPerRow; // 0 for first row of tables, 1 for second row
-                rowOffset = tableRowGroup * (getMaxRoomsInRowGroup(sortedBuildings, bIndex, buildingsPerRow) + 2);
+                int tableRowGroup = bIndex / buildingsPerRow;
+                rowOffset = 2 + tableRowGroup * (getMaxRoomsInRowGroup(sortedBuildings, bIndex, buildingsPerRow) + 2);
                 colOffset = (bIndex % buildingsPerRow) * (headers.length + 1);
 
                 // Header row
@@ -68,7 +96,7 @@ public class ExcelGenerator {
                     cell.setCellStyle(headerStyle);
                 }
 
-                // Get predefined rooms for building
+                // Expected rooms
                 List<String> expectedRooms = getExpectedRoomsForBuilding(building);
 
                 int rowNum = rowOffset + 1;
@@ -87,23 +115,63 @@ public class ExcelGenerator {
                         amountCell.setCellValue(donation.getAmount());
                         amountCell.setCellStyle(numberStyle);
                         row.createCell(col++).setCellValue(donation.getPaymentMode().name());
-                        row.createCell(col++).setCellValue(donation.getDate().toString());
-                        row.createCell(col).setCellValue(donation.getRemarks() != null ? donation.getRemarks() : "");
+                        row.createCell(col).setCellValue(donation.getDate().toString());
                     } else {
                         amountCell.setCellValue("");
-                        row.createCell(col++).setCellValue("");
                         row.createCell(col++).setCellValue("");
                         row.createCell(col).setCellValue("");
                     }
 
                     rowNum++;
                 }
+            }
 
-                // Auto-size columns for this table
-                for (int i = 0; i < headers.length; i++) {
-                    sheet.autoSizeColumn(colOffset + i);
+            // === EXTERNAL DONATIONS BELOW ===
+            if (!externalDonations.isEmpty()) {
+                int startRow = sheet.getLastRowNum() + 3; // leave gap
+
+                // Title
+                Row externalTitleRow = sheet.createRow(startRow);
+                Cell externalTitleCell = externalTitleRow.createCell(0);
+                externalTitleCell.setCellValue("External Donations");
+                externalTitleCell.setCellStyle(titleStyle);
+
+                sheet.addMergedRegion(new CellRangeAddress(startRow, startRow, 0, externalHeaders.length - 1));
+
+                // Header
+                Row headerRow = sheet.createRow(startRow + 1);
+                for (int i = 0; i < externalHeaders.length; i++) {
+                    Cell cell = headerRow.createCell(i);
+                    cell.setCellValue(externalHeaders[i]);
+                    cell.setCellStyle(headerStyle);
+                }
+
+                int rowNum = startRow + 2;
+                for (Donation d : externalDonations) {
+                    Row row = sheet.createRow(rowNum++);
+                    int col = 0;
+                    row.createCell(col++).setCellValue(d.getName());
+                    row.createCell(col++).setCellValue(d.getAmount());
+                    row.createCell(col++).setCellValue(d.getPaymentMode().name());
+                    row.createCell(col).setCellValue(d.getDate().toString());
                 }
             }
+
+            // === Compact column widths ===
+            int[] internalcolWidths = {8, 8, 8, 8, 10}; // adjust per column
+            for (int i = 0; i < headers.length; i++) {
+                sheet.setColumnWidth(i, 256 * internalcolWidths[i]);
+            }
+            int[] externalcolWidths = {12, 8, 8, 10};
+            for (int i = 0; i < externalHeaders.length; i++) {
+                sheet.setColumnWidth(i, 256 * externalcolWidths[Math.min(i, externalcolWidths.length - 1)]);
+            }
+
+            // === Print setup: fit to single page width ===
+            PrintSetup printSetup = sheet.getPrintSetup();
+            printSetup.setFitWidth((short) 1);
+            printSetup.setFitHeight((short) 0);
+            sheet.setAutobreaks(true);
 
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             workbook.write(out);
@@ -113,6 +181,9 @@ public class ExcelGenerator {
             throw new RuntimeException("Failed to generate Donations Excel", e);
         }
     }
+
+
+
 
     private static int getMaxRoomsInRowGroup(List<String> sortedBuildings, int startIndex, int buildingsPerRow) {
         int max = 0;

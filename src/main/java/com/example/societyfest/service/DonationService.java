@@ -26,16 +26,18 @@ public class DonationService {
     private final AuditLogService auditLogService;
 
     public DonationResponse addDonation(DonationRequest req, HttpServletRequest request) {
+        log.info("external value : {}" , req.getIsExternal() );
         Donation donation = Donation.builder()
                 .roomNumber(req.getRoomNumber())
+                .name(req.getName())
                 .amount(req.getAmount())
                 .building(req.getBuilding())
                 .paymentMode(req.getPaymentMode())
                 .date(req.getDate())
                 .remarks(req.getRemarks())
+                .isExternal(req.getIsExternal())
                 .build();
         donationRepo.save(donation);
-        log.info("date : {}", req.getDate());
         auditLogService.logChange("ADD_DONATION", "DONATION", donation.getId().toString(), null, toResponse(donation), request);
         return toResponse(donation);
     }
@@ -56,20 +58,22 @@ public class DonationService {
     private DonationResponse toResponse(Donation donation) {
         return DonationResponse.builder()
                 .id(donation.getId())
+                .name(donation.getName())
                 .amount(donation.getAmount())
                 .paymentMode(donation.getPaymentMode())
                 .building(donation.getBuilding())
                 .date(donation.getDate())
                 .remarks(donation.getRemarks())
                 .roomNumber(donation.getRoomNumber())
+                .isExternal(donation.getIsExternal())
                 .build();
     }
 
     public Page<DonationResponse> getDonationsByYear(int year,
                                                      String building,PaymentMode paymentMode,
-                                                     LocalDate date,Pageable pageable) {
+                                                     LocalDate date,Boolean isExternal,Pageable pageable) {
         try {
-            return donationRepo.findByYearAndFilters(year,building,paymentMode,date,pageable)
+            return donationRepo.findByYearAndFilters(year,building,paymentMode,date,isExternal,pageable)
                     .map(this::toResponse);
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
@@ -90,6 +94,8 @@ public class DonationService {
         donation.setPaymentMode(req.getPaymentMode());
         donation.setDate(req.getDate());
         donation.setRemarks(req.getRemarks());
+        donation.setName(req.getName());
+        donation.setIsExternal(req.getIsExternal());
 
         Donation updated = donationRepo.save(donation);
 
@@ -98,8 +104,9 @@ public class DonationService {
         auditLogService.logChange("EDIT_DONATION", "DONATION", donation.getId().toString(), before, after, request);
     }
 
-    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date) {
-        return donationRepo.findTotalByFilters(year, building, paymentMode,date);
+    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date,Boolean isExternal) {
+        log.info("external ---- : {} " , isExternal);
+        return donationRepo.findTotalByFilters(year, building, paymentMode,date,isExternal);
     }
 }
 
