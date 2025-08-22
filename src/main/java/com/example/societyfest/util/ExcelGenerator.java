@@ -20,7 +20,7 @@ public class ExcelGenerator {
 
     // ============================= DONATIONS EXPORT =============================
     public static InputStream donationsToExcel(List<Donation> donations) {
-        String[] headers = {"Building", "Room", "Amount", "Mode", "Date"};
+        String[] headers = {"Room", "Amount", "Mode", "Date"};
         String[] externalHeaders = {"Name", "Amount", "Mode", "Date"};
 
         // Separate internal vs external
@@ -47,7 +47,7 @@ public class ExcelGenerator {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Donations");
 
-            // ================== TITLE STYLE ==================
+            // ===== Title style =====
             CellStyle titleStyle = workbook.createCellStyle();
             Font titleFont = workbook.createFont();
             titleFont.setBold(true);
@@ -55,90 +55,114 @@ public class ExcelGenerator {
             titleStyle.setFont(titleFont);
             titleStyle.setAlignment(HorizontalAlignment.CENTER);
 
-            // Add main title at row 0
+            // Title
             Row titleRow = sheet.createRow(0);
             Cell titleCell = titleRow.createCell(0);
             titleCell.setCellValue("Ganesh Festival Donations");
             titleCell.setCellStyle(titleStyle);
-
-            // Merge title across first 5 columns
             sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, headers.length - 1));
 
-            // ================== HEADER STYLE ==================
+            // ===== Header style =====
             CellStyle headerStyle = workbook.createCellStyle();
-            Font font = workbook.createFont();
-            font.setBold(true);
-            headerStyle.setFont(font);
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
             headerStyle.setAlignment(HorizontalAlignment.CENTER);
 
-            // Numeric style
+            // ===== Building caption style =====
+            CellStyle buildingStyle = workbook.createCellStyle();
+            Font buildingFont = workbook.createFont();
+            buildingFont.setBold(true);
+            buildingFont.setFontHeightInPoints((short) 12);
+            buildingStyle.setFont(buildingFont);
+            buildingStyle.setAlignment(HorizontalAlignment.CENTER);
+
+            // Amount numeric style (right aligned)
             CellStyle numberStyle = workbook.createCellStyle();
+            numberStyle.setAlignment(HorizontalAlignment.RIGHT);
             numberStyle.setDataFormat(workbook.createDataFormat().getFormat("0"));
 
-            int colOffset = 0;
-            int rowOffset = 2; // shift down by 2 rows
+            // Layout settings
+            int baseTop = 2;                 // start below title (leave one blank row)
+            int gapBetweenRowGroups = 2;     // blank rows between the two big rows of tables
             int buildingsPerRow = (int) Math.ceil(sortedBuildings.size() / 2.0);
+            int[] internalColWidths = {8, 8, 10, 12};  // Room, Amount, Mode, Date (in characters)
 
-            // === INTERNAL DONATIONS ===
+            // === INTERNAL DONATIONS (building-wise) ===
             for (int bIndex = 0; bIndex < sortedBuildings.size(); bIndex++) {
                 String building = sortedBuildings.get(bIndex);
 
-                int tableRowGroup = bIndex / buildingsPerRow;
-                rowOffset = 2 + tableRowGroup * (getMaxRoomsInRowGroup(sortedBuildings, bIndex, buildingsPerRow) + 2);
-                colOffset = (bIndex % buildingsPerRow) * (headers.length + 1);
+                // Compute a consistent height for the entire row group
+                int tableRowGroup = bIndex / buildingsPerRow;                 // 0 or 1
+                int groupStartIndex = tableRowGroup * buildingsPerRow;        // start of this row group
+                int maxRoomsThisGroup = getMaxRoomsInRowGroup(sortedBuildings, groupStartIndex, buildingsPerRow);
 
-                // Header row
-                Row headerRow = sheet.getRow(rowOffset);
-                if (headerRow == null) headerRow = sheet.createRow(rowOffset);
+                // Each block has: 1 (building caption) + 1 (header) + maxRoomsThisGroup rows
+                int blockHeight = 2 + maxRoomsThisGroup;
+
+                // Row & column offsets for this block
+                int rowOffset = baseTop + tableRowGroup * (blockHeight + gapBetweenRowGroups);
+                int colOffset = (bIndex % buildingsPerRow) * (headers.length + 1);
+
+                // === Building caption row ===
+                Row buildingRow = sheet.getRow(rowOffset);
+                if (buildingRow == null) buildingRow = sheet.createRow(rowOffset);
+                Cell buildingCell = buildingRow.createCell(colOffset);
+                buildingCell.setCellValue(building);
+                buildingCell.setCellStyle(buildingStyle);
+                sheet.addMergedRegion(new CellRangeAddress(rowOffset, rowOffset, colOffset, colOffset + headers.length - 1));
+
+                // === Header row ===
+                Row headerRow = sheet.getRow(rowOffset + 1);
+                if (headerRow == null) headerRow = sheet.createRow(rowOffset + 1);
                 for (int i = 0; i < headers.length; i++) {
                     Cell cell = headerRow.createCell(colOffset + i);
                     cell.setCellValue(headers[i]);
                     cell.setCellStyle(headerStyle);
                 }
 
-                // Expected rooms
-                List<String> expectedRooms = getExpectedRoomsForBuilding(building);
+                // Column widths for this block
+                for (int i = 0; i < headers.length; i++) {
+                    sheet.setColumnWidth(colOffset + i, 256 * internalColWidths[i]);
+                }
 
-                int rowNum = rowOffset + 1;
+                // Fill rows for expected rooms
+                List<String> expectedRooms = getExpectedRoomsForBuilding(building);
+                int rowNum = rowOffset + 2;
                 for (String room : expectedRooms) {
                     Row row = sheet.getRow(rowNum);
                     if (row == null) row = sheet.createRow(rowNum);
 
+                    int c = colOffset;
+                    row.createCell(c++).setCellValue(room);
+
                     Donation donation = donationsMap.getOrDefault(building, Collections.emptyMap()).get(room);
-
-                    int col = colOffset;
-                    row.createCell(col++).setCellValue(building);
-                    row.createCell(col++).setCellValue(room);
-
-                    Cell amountCell = row.createCell(col++);
+                    Cell amountCell = row.createCell(c++);
                     if (donation != null) {
                         amountCell.setCellValue(donation.getAmount());
                         amountCell.setCellStyle(numberStyle);
-                        row.createCell(col++).setCellValue(donation.getPaymentMode().name());
-                        row.createCell(col).setCellValue(donation.getDate().toString());
+                        row.createCell(c++).setCellValue(donation.getPaymentMode().name());
+                        row.createCell(c).setCellValue(donation.getDate().toString());
                     } else {
+                        // keep cells empty but create to preserve grid
                         amountCell.setCellValue("");
-                        row.createCell(col++).setCellValue("");
-                        row.createCell(col).setCellValue("");
+                        row.createCell(c++).setCellValue("");
+                        row.createCell(c).setCellValue("");
                     }
-
                     rowNum++;
                 }
             }
 
-            // === EXTERNAL DONATIONS BELOW ===
+            // === EXTERNAL DONATIONS TABLE (below) ===
             if (!externalDonations.isEmpty()) {
-                int startRow = sheet.getLastRowNum() + 3; // leave gap
+                int startRow = sheet.getLastRowNum() + 3;
 
-                // Title
                 Row externalTitleRow = sheet.createRow(startRow);
                 Cell externalTitleCell = externalTitleRow.createCell(0);
                 externalTitleCell.setCellValue("External Donations");
                 externalTitleCell.setCellStyle(titleStyle);
-
                 sheet.addMergedRegion(new CellRangeAddress(startRow, startRow, 0, externalHeaders.length - 1));
 
-                // Header
                 Row headerRow = sheet.createRow(startRow + 1);
                 for (int i = 0; i < externalHeaders.length; i++) {
                     Cell cell = headerRow.createCell(i);
@@ -149,25 +173,23 @@ public class ExcelGenerator {
                 int rowNum = startRow + 2;
                 for (Donation d : externalDonations) {
                     Row row = sheet.createRow(rowNum++);
-                    int col = 0;
-                    row.createCell(col++).setCellValue(d.getName());
-                    row.createCell(col++).setCellValue(d.getAmount());
-                    row.createCell(col++).setCellValue(d.getPaymentMode().name());
-                    row.createCell(col).setCellValue(d.getDate().toString());
+                    int c = 0;
+                    row.createCell(c++).setCellValue(d.getName());
+                    Cell amountCell = row.createCell(c++);
+                    amountCell.setCellValue(d.getAmount());
+                    amountCell.setCellStyle(numberStyle);
+                    row.createCell(c++).setCellValue(d.getPaymentMode().name());
+                    row.createCell(c).setCellValue(d.getDate().toString());
+                }
+
+                // Wider Name column for external table
+                int[] externalColWidths = {25, 8, 10, 12};
+                for (int i = 0; i < externalHeaders.length; i++) {
+                    sheet.setColumnWidth(i, 256 * externalColWidths[i]);
                 }
             }
 
-            // === Compact column widths ===
-            int[] internalcolWidths = {8, 8, 8, 8, 10}; // adjust per column
-            for (int i = 0; i < headers.length; i++) {
-                sheet.setColumnWidth(i, 256 * internalcolWidths[i]);
-            }
-            int[] externalcolWidths = {12, 8, 8, 10};
-            for (int i = 0; i < externalHeaders.length; i++) {
-                sheet.setColumnWidth(i, 256 * externalcolWidths[Math.min(i, externalcolWidths.length - 1)]);
-            }
-
-            // === Print setup: fit to single page width ===
+            // Fit to single page width when printing
             PrintSetup printSetup = sheet.getPrintSetup();
             printSetup.setFitWidth((short) 1);
             printSetup.setFitHeight((short) 0);
@@ -181,8 +203,6 @@ public class ExcelGenerator {
             throw new RuntimeException("Failed to generate Donations Excel", e);
         }
     }
-
-
 
 
     private static int getMaxRoomsInRowGroup(List<String> sortedBuildings, int startIndex, int buildingsPerRow) {
