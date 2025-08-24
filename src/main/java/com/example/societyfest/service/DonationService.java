@@ -105,7 +105,6 @@ public class DonationService {
     }
 
     public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date,Boolean isExternal) {
-        log.info("external ---- : {} " , isExternal);
         return donationRepo.findTotalByFilters(year, building, paymentMode,date,isExternal);
     }
 }
