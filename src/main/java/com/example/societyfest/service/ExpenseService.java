@@ -312,5 +312,52 @@ public class ExpenseService {
     }
 
 
+    public ExpenseResponse updatePayment(Long expenseId, Long paymentId,
+                                         PaymentRequest updateRequest,
+                                         HttpServletRequest request) {
+        Expense expense = expenseRepo.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpensePayment payment = expense.getPayments().stream()
+                .filter(p -> p.getId().equals(paymentId))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Payment not found"));
+
+        // before state for audit log
+        PaymentResponse before = PaymentResponse.builder()
+                .id(payment.getId())
+                .amount(payment.getAmount())
+                .paymentDate(payment.getPaymentDate())
+                .paidBy(payment.getPaidBy())
+                .note(payment.getNote())
+                .paymentMethod(payment.getPaymentMethod())
+                .build();
+
+        // overwrite all fields from request
+        payment.setAmount(updateRequest.getAmount());
+        payment.setPaymentDate(updateRequest.getPaymentDate());
+        payment.setPaidBy(updateRequest.getPaidBy());
+        payment.setNote(updateRequest.getNote());
+        payment.setPaymentMethod(updateRequest.getPaymentMethod());
+
+        expensePaymentRepository.save(payment);
+
+        // after state for audit log
+        PaymentResponse after = PaymentResponse.builder()
+                .id(payment.getId())
+                .amount(payment.getAmount())
+                .paymentDate(payment.getPaymentDate())
+                .paidBy(payment.getPaidBy())
+                .note(payment.getNote())
+                .paymentMethod(payment.getPaymentMethod())
+                .build();
+
+        auditLogService.logChange("EDIT_PAYMENT", "EXPENSE_PAYMENT",
+                paymentId.toString(), before, after, request);
+
+        // totals auto-calculated in Expense entity
+        return toResponse(expense);
+    }
+
 
 }

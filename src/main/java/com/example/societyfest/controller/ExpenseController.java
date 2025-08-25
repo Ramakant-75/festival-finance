@@ -146,6 +146,18 @@ public class ExpenseController {
         return ResponseEntity.ok(updatedExpense);
     }
 
+    @PutMapping("/{expenseId}/payments/{paymentId}")
+    public ResponseEntity<ExpenseResponse> updatePayment(
+            @PathVariable Long expenseId,
+            @PathVariable Long paymentId,
+            @RequestBody PaymentRequest updateRequest,
+            HttpServletRequest httpServletRequest
+    ) {
+        ExpenseResponse response = expenseService.updatePayment(expenseId, paymentId, updateRequest, httpServletRequest);
+        return ResponseEntity.ok(response);
+    }
+
+
 
 }
 
