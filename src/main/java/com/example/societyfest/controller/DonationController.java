@@ -47,12 +47,14 @@ public class DonationController {
     }
 
 //    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateDonation(@PathVariable Long id, @RequestBody DonationRequest request,
-                                            HttpServletRequest httpServletRequest){
-        donationService.updateDonation(id, request,httpServletRequest);
-        return ResponseEntity.ok("Donation updated");
-    }
+        @PutMapping("/{id}")
+        public ResponseEntity<DonationResponse> updateDonation(@PathVariable Long id,
+                                                               @RequestBody DonationRequest request,
+                                                               HttpServletRequest httpServletRequest) {
+            DonationResponse response = donationService.updateDonation(id, request, httpServletRequest);
+            return ResponseEntity.ok(response);
+        }
+
 
 //    @GetMapping("/yearwise")
 //    public ResponseEntity<List<DonationResponse>> listDonationsByYear(@RequestParam int year){

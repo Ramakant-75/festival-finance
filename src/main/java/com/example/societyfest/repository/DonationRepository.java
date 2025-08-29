@@ -43,6 +43,9 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     @Query("SELECT SUM(d.amount) FROM Donation d WHERE YEAR(d.date) = :year")
     Double sumAmountByYear(@Param("year") int year);
 
+    @Query("SELECT SUM(d.amount) FROM Donation d WHERE YEAR(d.date) = :year")
+    Long sumAllDonations(@Param("year") int year);
+
     @Query("""
   SELECT d FROM Donation d
   WHERE YEAR(d.date) = :year
@@ -82,4 +85,13 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     @Query("SELECT SUM(d.amount) FROM Donation d WHERE d.paymentMode = :paymentMode AND YEAR(d.date) = :year")
     Double sumByModeAndYear(@Param("paymentMode") PaymentMode paymentMode, @Param("year") int year);
 
+    Optional<Donation> findFirstByIsExternalFalseOrderByIdAsc();
+
+    // Group by building (excluding external)
+    @Query("SELECT d.building, SUM(d.amount) FROM Donation d WHERE d.isExternal = false GROUP BY d.building ORDER BY SUM(d.amount) DESC")
+    List<Object[]> findBuildingTotals();
+
+    // Group by donor (building+room)
+    @Query("SELECT d.building, d.roomNumber, SUM(d.amount) FROM Donation d WHERE d.isExternal = false GROUP BY d.building, d.roomNumber ORDER BY SUM(d.amount) DESC")
+    List<Object[]> findTopDonators();
 }

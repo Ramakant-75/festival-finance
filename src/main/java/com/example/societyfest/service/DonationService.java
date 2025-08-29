@@ -25,22 +25,34 @@ public class DonationService {
     private final DonationRepository donationRepo;
     private final AuditLogService auditLogService;
 
+    private static final List<Integer> MILESTONES = List.of(25000, 50000, 75000, 100000);
+
     public DonationResponse addDonation(DonationRequest req, HttpServletRequest request) {
-        log.info("external value : {}" , req.getIsExternal() );
+        int currentYear = LocalDate.now().getYear();
+        Double beforeTotal = donationRepo.sumAmountByYear(currentYear);
+
         Donation donation = Donation.builder()
                 .roomNumber(req.getRoomNumber())
                 .name(req.getName())
                 .amount(req.getAmount())
                 .building(req.getBuilding())
                 .paymentMode(req.getPaymentMode())
-                .date(req.getDate())
+                .date(req.getDate() != null ? req.getDate() : LocalDate.now())
                 .remarks(req.getRemarks())
                 .isExternal(req.getIsExternal())
                 .build();
+
         donationRepo.save(donation);
         auditLogService.logChange("ADD_DONATION", "DONATION", donation.getId().toString(), null, toResponse(donation), request);
-        return toResponse(donation);
+
+        Double afterTotal = donationRepo.sumAmountByYear(currentYear);
+        List<Integer> unlocked = checkUnlockedMilestones(beforeTotal, afterTotal);
+
+        DonationResponse response = toResponse(donation);
+        response.setUnlockedMilestones(unlocked);
+        return response;
     }
+
 
 
     public List<DonationResponse> getAll() {
@@ -81,7 +93,10 @@ public class DonationService {
         return Page.empty(pageable);
     }
 
-    public void updateDonation(Long id, DonationRequest req, HttpServletRequest request) {
+    public DonationResponse updateDonation(Long id, DonationRequest req, HttpServletRequest request) {
+        int currentYear = LocalDate.now().getYear();
+        Double beforeTotal = donationRepo.sumAmountByYear(currentYear);
+
         Donation donation = donationRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Donation not found"));
 
@@ -99,13 +114,29 @@ public class DonationService {
 
         Donation updated = donationRepo.save(donation);
 
+        Double afterTotal = donationRepo.sumAmountByYear(currentYear);
+        List<Integer> unlocked = checkUnlockedMilestones(beforeTotal, afterTotal);
+
         DonationResponse after = toResponse(updated);
+        after.setUnlockedMilestones(unlocked);
+        after.setTotalDonation(afterTotal.longValue()); // 👈 also return running total
 
         auditLogService.logChange("EDIT_DONATION", "DONATION", donation.getId().toString(), before, after, request);
+
+        return after;
     }
+
+
 
     public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date,Boolean isExternal) {
         return donationRepo.findTotalByFilters(year, building, paymentMode,date,isExternal);
     }
+
+    private List<Integer> checkUnlockedMilestones(Double previousTotal, Double newTotal) {
+        return MILESTONES.stream()
+                .filter(m -> previousTotal < m && newTotal >= m)
+                .collect(Collectors.toList());
+    }
+
 }
 
