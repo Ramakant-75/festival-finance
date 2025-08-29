@@ -320,11 +320,12 @@ public class ExcelGenerator {
                 String paymentsCombined = "";
                 if (expense.getPayments() != null && !expense.getPayments().isEmpty()) {
                     paymentsCombined = expense.getPayments().stream()
-                            .map(p -> String.format("₹%.0f on %s%s%s",
+                            .map(p -> String.format("₹%.0f on %s%s%s%s",
                                     p.getAmount(),
                                     p.getPaymentDate(),
                                     p.getPaidBy() != null ? " by " + p.getPaidBy() : "",
-                                    p.getPaymentMethod() != null ? " via " + p.getPaymentMethod() : ""))
+                                    p.getPaymentMethod() != null ? " via " + p.getPaymentMethod() : "",
+                                    p.getNote() != null ? " - " + p.getNote(): ""))
                             .collect(Collectors.joining("\n"));
                 }
 
