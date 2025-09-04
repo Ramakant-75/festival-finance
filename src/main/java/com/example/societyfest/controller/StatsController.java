@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/stats")
@@ -27,8 +29,9 @@ public class StatsController {
     }
 
     @GetMapping("/donations")
-    public ResponseEntity<DonationStatsResponse> getDonationStats() {
-        return ResponseEntity.ok(donationStatsService.getStats());
+    public ResponseEntity<DonationStatsResponse> getDonationStats(@RequestParam(value = "year", required = false) Integer year) {
+        int targetYear = (year != null) ? year : LocalDate.now().getYear();
+        return ResponseEntity.ok(donationStatsService.getStats(targetYear));
     }
 }
 

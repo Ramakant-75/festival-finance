@@ -16,15 +16,15 @@ public class DonationStatsService {
     @Autowired
     private DonationRepository donationRepository;
 
-    public DonationStatsResponse getStats() {
+    public DonationStatsResponse getStats(int year) {
         DonationStatsResponse response = new DonationStatsResponse();
 
         // 1. Early bird
-        donationRepository.findFirstByIsExternalFalseOrderByIdAsc()
+        donationRepository.findFirstByYear(year)
                 .ifPresent(d -> response.setEarlyBirdDonator(d.getBuilding() + "-" + d.getRoomNumber()));
 
         // 2. Highest & Least building
-        List<Object[]> buildingTotals = donationRepository.findBuildingTotals();
+        List<Object[]> buildingTotals = donationRepository.findBuildingTotals(year);
         if (!buildingTotals.isEmpty()) {
             Object[] highest = buildingTotals.get(0);
             response.setHighestDonatingBuilding((String) highest[0]);
@@ -36,7 +36,7 @@ public class DonationStatsService {
         }
 
         // 3. Top 3 donators
-        List<Object[]> topDonators = donationRepository.findTopDonators();
+        List<Object[]> topDonators = donationRepository.findTopDonators(year);
         List<DonationStatsResponse.TopDonator> topList = topDonators.stream()
                 .limit(3)
                 .map(obj -> new DonationStatsResponse.TopDonator(
@@ -46,7 +46,7 @@ public class DonationStatsService {
                 ))
                 .toList();
 
-        Double total = donationRepository.sumAmountByYear(LocalDate.now().getYear()); // <-- implement this query
+        Double total = donationRepository.sumAmountByYear(year); // <-- implement this query
         response.setTotalDonations(total != null ? total : 0);
 
         response.setTopDonators(topList);

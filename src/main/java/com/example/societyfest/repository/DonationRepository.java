@@ -88,10 +88,17 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     Optional<Donation> findFirstByIsExternalFalseOrderByIdAsc();
 
     // Group by building (excluding external)
-    @Query("SELECT d.building, SUM(d.amount) FROM Donation d WHERE d.isExternal = false GROUP BY d.building ORDER BY SUM(d.amount) DESC")
-    List<Object[]> findBuildingTotals();
+    @Query("SELECT d.building, SUM(d.amount) FROM Donation d WHERE d.isExternal = false AND YEAR(d.date) =:year GROUP BY d.building ORDER BY SUM(d.amount) DESC")
+    List<Object[]> findBuildingTotals(@Param("year") int year);
 
     // Group by donor (building+room)
-    @Query("SELECT d.building, d.roomNumber, SUM(d.amount) FROM Donation d WHERE d.isExternal = false GROUP BY d.building, d.roomNumber ORDER BY SUM(d.amount) DESC")
-    List<Object[]> findTopDonators();
+    @Query("SELECT d.building, d.roomNumber, SUM(d.amount) FROM Donation d WHERE d.isExternal = false AND YEAR(d.date) =:year GROUP BY d.building, d.roomNumber ORDER BY SUM(d.amount) DESC")
+    List<Object[]> findTopDonators(@Param("year") int year);
+
+    @Query(value = "SELECT * FROM donation d " +
+            "WHERE d.is_external = false AND YEAR(d.date) = :year " +
+            "ORDER BY d.id ASC LIMIT 1",
+            nativeQuery = true)
+    Optional<Donation> findFirstByYear(@Param("year") int year);
+
 }

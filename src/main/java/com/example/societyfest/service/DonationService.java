@@ -1,6 +1,5 @@
 package com.example.societyfest.service;
 
-
 import com.example.societyfest.dto.DonationRequest;
 import com.example.societyfest.dto.DonationResponse;
 import com.example.societyfest.entity.Donation;
@@ -14,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,7 +25,9 @@ public class DonationService {
     private final DonationRepository donationRepo;
     private final AuditLogService auditLogService;
 
-    private static final List<Integer> MILESTONES = List.of(25000, 50000, 75000, 100000);
+    // Base milestones up to 100k
+    private static final List<Integer> BASE_MILESTONES = List.of(25000, 50000, 75000, 100000);
+    private static final int STEP_SIZE = 25000; // milestones will continue in steps of 25k
 
     public DonationResponse addDonation(DonationRequest req, HttpServletRequest request) {
         int currentYear = LocalDate.now().getYear();
@@ -53,15 +55,13 @@ public class DonationService {
         return response;
     }
 
-
-
     public List<DonationResponse> getAll() {
         try {
             return donationRepo.findAll()
                     .stream()
                     .map(this::toResponse)
                     .collect(Collectors.toList());
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("stacktrace : {}", e.getMessage());
         }
         return null;
@@ -82,10 +82,10 @@ public class DonationService {
     }
 
     public Page<DonationResponse> getDonationsByYear(int year,
-                                                     String building,PaymentMode paymentMode,
-                                                     LocalDate date,Boolean isExternal,Pageable pageable) {
+                                                     String building, PaymentMode paymentMode,
+                                                     LocalDate date, Boolean isExternal, Pageable pageable) {
         try {
-            return donationRepo.findByYearAndFilters(year,building,paymentMode,date,isExternal,pageable)
+            return donationRepo.findByYearAndFilters(year, building, paymentMode, date, isExternal, pageable)
                     .map(this::toResponse);
         } catch (Exception e) {
             log.info("stacktrace : {}", e.getMessage());
@@ -126,17 +126,23 @@ public class DonationService {
         return after;
     }
 
-
-
-    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode,LocalDate date,Boolean isExternal) {
-        return donationRepo.findTotalByFilters(year, building, paymentMode,date,isExternal);
+    public Double getFilteredTotal(Integer year, String building, PaymentMode paymentMode, LocalDate date, Boolean isExternal) {
+        return donationRepo.findTotalByFilters(year, building, paymentMode, date, isExternal);
     }
 
     private List<Integer> checkUnlockedMilestones(Double previousTotal, Double newTotal) {
-        return MILESTONES.stream()
+        List<Integer> allMilestones = new ArrayList<>(BASE_MILESTONES);
+
+        // extend dynamically beyond the last base milestone
+        int lastBase = BASE_MILESTONES.get(BASE_MILESTONES.size() - 1);
+        int maxTarget = (int) Math.ceil(newTotal / STEP_SIZE) * STEP_SIZE;
+
+        for (int m = lastBase + STEP_SIZE; m <= maxTarget; m += STEP_SIZE) {
+            allMilestones.add(m);
+        }
+
+        return allMilestones.stream()
                 .filter(m -> previousTotal < m && newTotal >= m)
                 .collect(Collectors.toList());
     }
-
 }
-
