@@ -15,6 +15,7 @@ public class SignUpDto {
     private String password;
     private Role role;
     private String isActive;
+    private String mailId;
 }
 
 

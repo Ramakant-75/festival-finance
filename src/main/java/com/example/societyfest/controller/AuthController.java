@@ -4,9 +4,11 @@ import com.example.societyfest.dto.*;
 import com.example.societyfest.entity.User;
 import com.example.societyfest.enums.Role;
 import com.example.societyfest.repository.UserRepository;
+import com.example.societyfest.service.ForgotPasswordService;
 import com.example.societyfest.service.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.*;
@@ -29,6 +31,9 @@ public class AuthController {
     private final AuthenticationManager authMgr;
     private final PasswordEncoder encoder;
 
+    @Autowired
+    private ForgotPasswordService forgotPasswordService;
+
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignUpDto req) {
         if (userRepo.findByUsername(req.getUsername()).isPresent()) {
@@ -37,7 +42,8 @@ public class AuthController {
         User user = User.builder()
                 .username(req.getUsername())
                 .password(encoder.encode(req.getPassword()))
-                .role(Role.USER)
+                .role(req.getRole() != null ? req.getRole() : Role.USER)
+                .mailId(req.getMailId())
                 .isActive("N")
                 .build();
         userRepo.save(user);
@@ -84,5 +90,34 @@ public class AuthController {
         return ResponseEntity.ok(!exists); // true means available
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(
+            @RequestBody ForgotPasswordRequestDto dto) {
 
+        forgotPasswordService
+                .sendResetLink(dto.getMailId());
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "If the email exists, a reset link has been sent."
+                )
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestBody ResetPasswordRequestDto dto) {
+
+        forgotPasswordService.resetPassword(
+                dto.getToken(),
+                dto.getNewPassword());
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "message",
+                        "Password reset successfully"
+                )
+        );
+    }
 }
