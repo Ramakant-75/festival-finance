@@ -19,6 +19,8 @@ public class Donation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String name;
+
     private String roomNumber;
 
     private double amount;
@@ -33,6 +35,8 @@ public class Donation {
 
     private String remarks;
 
+    private Boolean isExternal;
+
     @PrePersist
     public void setDefaultDateIfNull(){
         if (this.date == null){
@@ -42,11 +46,13 @@ public class Donation {
 
     public Donation(Donation other) {
         this.id = other.id;
+        this.name = other.name;
         this.building = other.building;
         this.roomNumber = other.roomNumber;
         this.amount = other.amount;
         this.paymentMode = other.paymentMode;
         this.date = other.date;
         this.remarks = other.remarks;
+        this.isExternal = other.isExternal;
     }
 }

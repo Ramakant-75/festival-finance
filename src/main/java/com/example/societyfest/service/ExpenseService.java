@@ -128,12 +128,14 @@ public class ExpenseService {
 
 
 
-    public ExpenseResponse updateExpense(Long id, ExpenseUpdateRequest req, HttpServletRequest request) {
+    public ExpenseResponse updateExpense(Long id,
+                                         ExpenseUpdateRequest req,
+                                         List<MultipartFile> receipts,
+                                         HttpServletRequest request) {
         Expense expense = expenseRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Expense not found"));
 
         ExpenseResponse before = toResponse(new Expense(expense));
-
 
         expense.setCategory(req.getCategory());
         expense.setAmount(req.getAmount());
@@ -143,12 +145,32 @@ public class ExpenseService {
 
         Expense updated = expenseRepo.save(expense);
 
-        ExpenseResponse after = toResponse(updated);
+        // 🔑 Save new receipts if any
+        if (receipts != null) {
+            for (MultipartFile file : receipts) {
+                if (!file.isEmpty()) {
+                    try {
+                        ExpenseReceipt receipt = ExpenseReceipt.builder()
+                                .expense(updated)
+                                .fileName(file.getOriginalFilename())
+                                .file(file.getBytes())
+                                .contentType(file.getContentType())
+                                .build();
+                        receiptRepo.save(receipt);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to store receipt: " + file.getOriginalFilename(), e);
+                    }
+                }
+            }
+        }
 
+        ExpenseResponse after = toResponse(updated);
         auditLogService.logChange("EDIT_EXPENSE", "EXPENSE", expense.getId().toString(), before, after, request);
 
-        return toResponse(updated);
+        return after;
     }
+
+
 
     public ExpenseResponse saveExpenseWithImage(ExpenseRequest req, MultipartFile image) {
         byte[] imageData = null;
@@ -253,6 +275,87 @@ public class ExpenseService {
 
         auditLogService.logChange("ADD_PAYMENT", "EXPENSE_PAYMENT", expenseId.toString(), null, paymentRequest, request);
 
+        return toResponse(expense);
+    }
+
+    public ExpenseResponse deleteReceipt(Long expenseId, Long receiptId, HttpServletRequest request) {
+        Expense expense = expenseRepo.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpenseReceipt receipt = receiptRepo.findById(receiptId)
+                .orElseThrow(() -> new NoSuchElementException("Receipt not found"));
+
+        // Ensure the receipt belongs to this expense
+        if (!receipt.getExpense().getId().equals(expense.getId())) {
+            throw new IllegalArgumentException("Receipt does not belong to this expense");
+        }
+
+        // Log before deletion
+        ExpenseResponse.ReceiptMetadata before = new ExpenseResponse.ReceiptMetadata(receipt.getId(), receipt.getFileName());
+
+        receiptRepo.delete(receipt);
+
+        // Audit log
+        auditLogService.logChange(
+                "DELETE_RECEIPT",
+                "EXPENSE_ATTACHMENT",
+                receiptId.toString(),
+                before,
+                null,
+                request
+        );
+
+        log.info("Deleted receipt {} for expense {}", receiptId, expenseId);
+
+        // Return updated expense response
+        return toResponse(expense);
+    }
+
+
+    public ExpenseResponse updatePayment(Long expenseId, Long paymentId,
+                                         PaymentRequest updateRequest,
+                                         HttpServletRequest request) {
+        Expense expense = expenseRepo.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found"));
+
+        ExpensePayment payment = expense.getPayments().stream()
+                .filter(p -> p.getId().equals(paymentId))
+                .findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Payment not found"));
+
+        // before state for audit log
+        PaymentResponse before = PaymentResponse.builder()
+                .id(payment.getId())
+                .amount(payment.getAmount())
+                .paymentDate(payment.getPaymentDate())
+                .paidBy(payment.getPaidBy())
+                .note(payment.getNote())
+                .paymentMethod(payment.getPaymentMethod())
+                .build();
+
+        // overwrite all fields from request
+        payment.setAmount(updateRequest.getAmount());
+        payment.setPaymentDate(updateRequest.getPaymentDate());
+        payment.setPaidBy(updateRequest.getPaidBy());
+        payment.setNote(updateRequest.getNote());
+        payment.setPaymentMethod(updateRequest.getPaymentMethod());
+
+        expensePaymentRepository.save(payment);
+
+        // after state for audit log
+        PaymentResponse after = PaymentResponse.builder()
+                .id(payment.getId())
+                .amount(payment.getAmount())
+                .paymentDate(payment.getPaymentDate())
+                .paidBy(payment.getPaidBy())
+                .note(payment.getNote())
+                .paymentMethod(payment.getPaymentMethod())
+                .build();
+
+        auditLogService.logChange("EDIT_PAYMENT", "EXPENSE_PAYMENT",
+                paymentId.toString(), before, after, request);
+
+        // totals auto-calculated in Expense entity
         return toResponse(expense);
     }
 

@@ -11,6 +11,9 @@ import com.lowagie.text.pdf.PdfWriter;
 import java.awt.*;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -68,11 +71,39 @@ public class PdfGenerator {
 
             document.add(table);
 
+            Font messageFont = FontFactory.getFont(FontFactory.TIMES_BOLD, 14);
+            Paragraph thankYouMessage = new Paragraph(
+                    "We sincerely thank all society members for their active donations and participation " +
+                            "in making this festival a grand success. We expect same energy and enthusiasm next year too.",
+                    messageFont
+            );
+            thankYouMessage.setSpacingBefore(20);
+            thankYouMessage.setSpacingAfter(15);
+            document.add(thankYouMessage);
+
+            Path path = Paths.get("src/main/resources/special_thanks.txt");
+            if (Files.exists(path)){
+                Font thanksFont = FontFactory.getFont(FontFactory.HELVETICA, 14);
+                Paragraph specialThanksHeading = new Paragraph("Special Thanks to our Sponsors :", thanksFont);
+                specialThanksHeading.setAlignment(Element.ALIGN_CENTER);
+                specialThanksHeading.setSpacingBefore(15);
+                specialThanksHeading.setSpacingAfter(10);
+                document.add(specialThanksHeading);
+
+                List<String> lines = Files.readAllLines(path);
+                for (String line : lines){
+                    Paragraph sponsorPara = new Paragraph(line,FontFactory.getFont(FontFactory.TIMES_BOLDITALIC,12));
+                    sponsorPara.setAlignment(Element.ALIGN_CENTER);
+                    sponsorPara.setIndentationLeft(20);
+                    document.add(sponsorPara);
+                }
+            }
+
             // Gratitude
-            Paragraph thanks = new Paragraph("We sincerely thank all society members for their generous contributions and active participation in making the festival a grand success.", summaryFont);
-            thanks.setSpacingBefore(20);
-            thanks.setSpacingAfter(30);
-            document.add(thanks);
+//            Paragraph thanks = new Paragraph("We sincerely thank all society members for their generous contributions and active participation in making the festival a grand success.", summaryFont);
+//            thanks.setSpacingBefore(20);
+//            thanks.setSpacingAfter(30);
+//            document.add(thanks);
 
             // Signatures
             PdfPTable signatureTable = new PdfPTable(2);

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @Builder
 public class DonationResponse {
     private Long id;
+    private String name;
     private String building;
     private int floor;
     private String roomNumber;
@@ -22,4 +24,8 @@ public class DonationResponse {
     private LocalDate date;
 
     private String remarks;
+    private Boolean isExternal;
+    private Long totalDonation;      // running total
+    private List<Integer> unlockedMilestones;  // optional, can be empty
+
 }

@@ -42,6 +42,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of("http://localhost:5173")); // your React dev server
+//        config.setAllowedOriginPatterns(List.of("http://localhost:8090")); // your backend dev server
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -66,6 +67,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/chat").permitAll()
                                 .requestMatchers("/api/export/**").permitAll()
                                 .requestMatchers("/api/audit-logs/**").hasRole("ADMIN")
+                                .requestMatchers("/swagger-ui/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

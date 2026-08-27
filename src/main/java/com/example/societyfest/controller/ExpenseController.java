@@ -62,11 +62,18 @@ public class ExpenseController {
     }
 
 
-//    @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/{id}")
-    public ResponseEntity<ExpenseResponse> update(@PathVariable Long id, @RequestBody ExpenseUpdateRequest req, HttpServletRequest httpServletRequest) {
-        return ResponseEntity.ok(expenseService.updateExpense(id, req,httpServletRequest));
+    //    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ExpenseResponse> update(
+            @PathVariable Long id,
+            @RequestPart("data") ExpenseUpdateRequest req,
+            @RequestPart(value = "receipts", required = false) List<MultipartFile> receipts,
+            HttpServletRequest httpServletRequest) {
+        return ResponseEntity.ok(
+                expenseService.updateExpense(id, req, receipts, httpServletRequest)
+        );
     }
+
 
     @PostMapping("/upload")
     public ResponseEntity<ExpenseResponse> uploadExpenseWithImage(
@@ -129,6 +136,28 @@ public class ExpenseController {
         ExpenseResponse response = expenseService.addPaymentToExpense(expenseId, paymentRequest, httpServletRequest);
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{expenseId}/receipts/{receiptId}")
+    public ResponseEntity<ExpenseResponse> deleteReceipt(
+            @PathVariable Long expenseId,
+            @PathVariable Long receiptId,
+            HttpServletRequest request) {
+        ExpenseResponse updatedExpense = expenseService.deleteReceipt(expenseId, receiptId, request);
+        return ResponseEntity.ok(updatedExpense);
+    }
+
+    @PutMapping("/{expenseId}/payments/{paymentId}")
+    public ResponseEntity<ExpenseResponse> updatePayment(
+            @PathVariable Long expenseId,
+            @PathVariable Long paymentId,
+            @RequestBody PaymentRequest updateRequest,
+            HttpServletRequest httpServletRequest
+    ) {
+        ExpenseResponse response = expenseService.updatePayment(expenseId, paymentId, updateRequest, httpServletRequest);
+        return ResponseEntity.ok(response);
+    }
+
+
 
 }
 

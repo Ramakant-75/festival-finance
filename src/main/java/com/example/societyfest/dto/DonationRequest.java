@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class DonationRequest {
+    private String name;
     private String roomNumber;
     private double amount;
     private PaymentMode paymentMode;
@@ -20,5 +21,6 @@ public class DonationRequest {
     private LocalDate date;
 
     private String remarks;
+    private Boolean isExternal;
 }
 
