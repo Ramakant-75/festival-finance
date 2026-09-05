@@ -11,6 +11,18 @@ spring:
       hibernate:
         format_sql: false
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: example@gmail.com
+    password: 12345678
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   servlet:
     multipart:
       enabled: true
@@ -23,3 +35,6 @@ server:
 jwt:
   secret-file: /Users/ramakant/Documents/ramakant/project_env_files/secret_prod.txt
   expirationMs: 86400000
+
+app:
+  frontend-url: http://saptarang.netlify.app

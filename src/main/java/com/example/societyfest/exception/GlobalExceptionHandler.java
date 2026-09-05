@@ -1,5 +1,7 @@
 package com.example.societyfest.exception;
 
+import com.example.societyfest.dto.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -7,9 +9,9 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -29,22 +31,38 @@ public class GlobalExceptionHandler {
 
     private final Random random = new Random();
 
-        @ExceptionHandler(BadCredentialsException.class)
-        public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException ex) {
-            String message = SARCASTIC_MESSAGES.get(random.nextInt(SARCASTIC_MESSAGES.size()));
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", message));
-        }
-
-        @ExceptionHandler(AuthenticationException.class)
-        public ResponseEntity<Map<String, String>> handleAuthExceptions(AuthenticationException ex) {
-            return ResponseEntity
-                    .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Authentication failed. Please check your credentials."));
-        }
-
-
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
+        String sarcasticMessage = SARCASTIC_MESSAGES.get(random.nextInt(SARCASTIC_MESSAGES.size()));
+        
+        log.warn("Bad credentials attempt. Exception: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .mainMessage("Username or password incorrect")  // This will be highlighted on UI
+                .additionalMessage(sarcasticMessage)            // Optional sarcastic message
+                .errorCode("INVALID_CREDENTIALS")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .build();
+        
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(errorResponse);
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthExceptions(AuthenticationException ex) {
+        log.warn("Authentication exception: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .mainMessage("Authentication failed")
+                .additionalMessage("Please check your credentials.")
+                .errorCode("AUTH_FAILED")
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .build();
+        
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(errorResponse);
+    }
+}
 

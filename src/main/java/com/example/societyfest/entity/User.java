@@ -25,5 +25,7 @@ public class User {
     private Role role;
     @Column(nullable = false)
     private String isActive = "N";
+    @Column(nullable = false)
+    private String mailId;
 }
 
