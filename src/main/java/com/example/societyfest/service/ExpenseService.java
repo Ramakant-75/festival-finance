@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -202,8 +203,16 @@ public class ExpenseService {
     }
 
     public List<ExpenseResponse> getAllDetailedExpenseResponses() {
-        List<Expense> expenses = expenseRepo.findAll();
-        log.info("begin expense service");
+        return getDetailedExpenseResponses(null);
+    }
+
+    /**
+     * Returns detailed expense responses for the given year. When year is null, defaults to current year.
+     */
+    public List<ExpenseResponse> getDetailedExpenseResponses(Integer year) {
+        int exportYear = (year == null) ? LocalDate.now().getYear() : year;
+        List<Expense> expenses = expenseRepo.findAllByYear(exportYear);
+        log.info("begin expense service for year {}", exportYear);
         List<ExpenseResponse> responses = new ArrayList<>();
 
         for (Expense expense : expenses) {
@@ -236,9 +245,9 @@ public class ExpenseService {
                     .build();
 
             responses.add(response);
-            log.info("end expense service");
         }
 
+        log.info("end expense service for year {}", exportYear);
         return responses;
     }
 

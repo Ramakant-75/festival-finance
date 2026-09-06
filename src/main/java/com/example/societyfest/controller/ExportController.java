@@ -84,12 +84,13 @@ public class ExportController {
     }
 
     @GetMapping("/export-detailed-expenses")
-    public void exportDetailedExpenses(HttpServletResponse response) throws IOException {
-        log.info("detailed export");
-        List<ExpenseResponse> expenses = expenseService.getAllDetailedExpenseResponses();
+    public void exportDetailedExpenses(@RequestParam(required = false) Integer year, HttpServletResponse response) throws IOException {
+        int exportYear = (year == null) ? LocalDate.now().getYear() : year;
+        log.info("detailed export for year {}", exportYear);
+        List<ExpenseResponse> expenses = expenseService.getDetailedExpenseResponses(exportYear);
 
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=detailed_expenses.xlsx");
+        response.setHeader("Content-Disposition", "attachment; filename=detailed_expenses-" + exportYear + ".xlsx");
 
         InputStream excelStream = ExcelGenerator.detailedExpensesToExcel(expenses);
         IOUtils.copy(excelStream, response.getOutputStream());
