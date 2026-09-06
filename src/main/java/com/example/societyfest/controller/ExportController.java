@@ -56,10 +56,13 @@ public class ExportController {
 
 //    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/expenses")
-    public ResponseEntity<InputStreamResource> exportExpenses() {
-        var excelStream = ExcelGenerator.expensesToExcel(expenseRepo.findAll());
+    public ResponseEntity<InputStreamResource> exportExpenses(@RequestParam(required = false) Integer year) {
+        // Default to current year when no year is provided
+        int exportYear = (year == null) ? LocalDate.now().getYear() : year;
+        List<Expense> expenses = expenseRepo.findAllByYear(exportYear);
+        var excelStream = ExcelGenerator.expensesToExcel(expenses);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=expenses.xlsx")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=expenses-" + exportYear + ".xlsx")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(new InputStreamResource(excelStream));
     }

@@ -24,9 +24,24 @@ spring:
       max-file-size: 20MB
       max-request-size: 50MB
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: gachinikhil97@gmail.com
+    password: gwtz uwgo txlk fqul
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
   port: 8090
 
 jwt:
   secret-file: /Users/ramakant/Documents/ramakant/project_env_files/secret_local.txt
   expirationMs: 86400000
+
+app:
+  frontend-url: http://localhost:5173

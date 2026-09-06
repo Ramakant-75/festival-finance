@@ -6,6 +6,7 @@ import com.example.societyfest.enums.Role;
 import com.example.societyfest.repository.UserRepository;
 import com.example.societyfest.service.ForgotPasswordService;
 import com.example.societyfest.service.JwtService;
+import com.example.societyfest.service.TelegramNotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ public class AuthController {
     @Autowired
     private ForgotPasswordService forgotPasswordService;
 
+
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody SignUpDto req) {
         if (userRepo.findByUsername(req.getUsername()).isPresent()) {
@@ -47,6 +49,7 @@ public class AuthController {
                 .isActive("N")
                 .build();
         userRepo.save(user);
+//        telegramNotificationService.notifyAdminOfNewSignup(user.getUsername(), user.getMailId());
         return ResponseEntity.ok("User registered successfully");
     }
 
