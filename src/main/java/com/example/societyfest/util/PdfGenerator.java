@@ -29,16 +29,16 @@ public class PdfGenerator {
 
             // Title
             Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 20);
-            Paragraph title = new Paragraph("Festival Report ™ - " + year, titleFont);
+            Paragraph title = new Paragraph("Ganesh Festival Report - " + year, titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(20);
             document.add(title);
 
             // Summary
             Font summaryFont = FontFactory.getFont(FontFactory.TIMES_BOLDITALIC, 14);
-            Paragraph summary = new Paragraph(String.format(
-                    "Total Donations: ₹%.2f\nTotal Expenses: ₹%.2f\nBalance: ₹%.2f",
-                    totalDonations, totalExpenses, balance), summaryFont);
+            Paragraph summary = new Paragraph(
+                    String.format("Total Donations: ₹%.2f | Total Expenses: ₹%.2f | Balance: ₹%.2f",
+                            totalDonations, totalExpenses, balance), summaryFont);
             summary.setSpacingAfter(20);
             document.add(summary);
 
@@ -92,6 +92,9 @@ public class PdfGenerator {
 
                 List<String> lines = Files.readAllLines(path);
                 for (String line : lines){
+                    if (line == null || line.trim().isEmpty()) {
+                        continue;
+                    }
                     Paragraph sponsorPara = new Paragraph(line,FontFactory.getFont(FontFactory.TIMES_BOLDITALIC,12));
                     sponsorPara.setAlignment(Element.ALIGN_CENTER);
                     sponsorPara.setIndentationLeft(20);
@@ -105,23 +108,6 @@ public class PdfGenerator {
 //            thanks.setSpacingAfter(30);
 //            document.add(thanks);
 
-            // Signatures
-            PdfPTable signatureTable = new PdfPTable(2);
-            signatureTable.setWidthPercentage(100);
-            signatureTable.setSpacingBefore(20);
-
-            PdfPCell cell1 = new PdfPCell(new Phrase("\n\n_______________________\nPresident"));
-            cell1.setBorder(Rectangle.NO_BORDER);
-            cell1.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-            PdfPCell cell2 = new PdfPCell(new Phrase("\n\n_______________________\nTreasurer"));
-            cell2.setBorder(Rectangle.NO_BORDER);
-            cell2.setHorizontalAlignment(Element.ALIGN_CENTER);
-
-            signatureTable.addCell(cell1);
-            signatureTable.addCell(cell2);
-
-            document.add(signatureTable);
             document.close();
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate PDF", e);
